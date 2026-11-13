@@ -138,7 +138,7 @@ namespace OmegaTube.Ui
             {
                 int panelW = Math.Min(width - 2 * Pad, 1040);
                 const int panelH = 360;
-                emptyView = Widgets.Panel(panelW, panelH);
+                emptyView = Widgets.Panel(Theme.Panel, panelW, panelH, Theme.PanelRadius + 4);
                 emptyView.Position = new Position((width - panelW) / 2, Math.Max(Pad, (height - panelH) / 2 - 30));
 
                 var circle = new ImageView { ResourceUrl = Theme.Image("circle_mask"), Color = Theme.SurfaceHigh,
