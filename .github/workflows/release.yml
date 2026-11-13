@@ -31,6 +31,9 @@ jobs:
         with:
           dotnet-version: 10.0.x
 
+      - name: Install Tizen workload
+        run: dotnet workload install tizen
+
       - name: Fetch third-party sources
         run: scripts/fetch-deps.sh
 
@@ -40,7 +43,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: omegatube-tpk
-          path: app/OmegaTube/bin/Release/tizen60/*.tpk
+          path: app/OmegaTube/bin/Release/net8.0-tizen10.0/**/*.tpk
 
       # Stable names: install.sh downloads them from releases/latest/download/.
       - name: Attach to the release
@@ -50,8 +53,9 @@ jobs:
           mkdir -p dist
           VERSION=$(head -n1 VERSION)
           COMMIT_ID=$(git rev-parse --short HEAD)
-          cp app/OmegaTube/bin/Release/tizen60/*.tpk dist/OmegaTube.tpk
-          cp app/OmegaTube/bin/Release/tizen60/*.tpk "dist/omegatube-${VERSION}-${COMMIT_ID}.tpk"
+          TPK=$(find app/OmegaTube/bin/Release -name '*.tpk' | head -n1)
+          cp "$TPK" dist/OmegaTube.tpk
+          cp "$TPK" "dist/omegatube-${VERSION}-${COMMIT_ID}.tpk"
           cp scripts/install-tv.sh dist/install.sh
           cp scripts/install-tv.ps1 dist/install.ps1
           cp tools/samsung-cert/SamsungCert.java dist/

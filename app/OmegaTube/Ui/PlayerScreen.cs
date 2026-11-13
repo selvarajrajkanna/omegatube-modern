@@ -419,6 +419,7 @@ namespace OmegaTube.Ui
                 return;
             }
             info = YouTube.Playback(player);
+            ApplyHdrUiMode(info.Current != null && info.Current.Hdr);
             live = info.Live;
             if (item.IsList && info.Title.Length > 0)
             {
@@ -516,6 +517,19 @@ namespace OmegaTube.Ui
                 default:
                     return (T("Cannot play this video"), "");
             }
+        }
+
+        // On HDR TVs the graphics plane is composited over the HDR video plane; dimming bright whites
+        // and HUD opacity prevents the overlay from blasting at peak brightness over dark HDR scenes.
+        private void ApplyHdrUiMode(bool hdr)
+        {
+            captionLabel.TextColor = hdr ? new Color(0.62f, 0.62f, 0.62f, 0.92f) : Color.White;
+            chrome.Opacity = hdr ? 0.72f : 1.0f;
+            panel.Opacity = hdr ? 0.82f : 1.0f;
+            statsLabel.Opacity = hdr ? 0.75f : 1.0f;
+            toast.Opacity = hdr ? 0.80f : 1.0f;
+            tooltip.BackgroundColor = hdr ? new Color(0.12f, 0.12f, 0.12f, 0.88f) : Theme.CardInfoFocused;
+            tooltip.TextColor = hdr ? new Color(0.75f, 0.75f, 0.75f, 1.0f) : Theme.CardTextFocused;
         }
 
         // "1,2 M de vues  •  12 mars 2023" (the card's texts until the player / details answer).

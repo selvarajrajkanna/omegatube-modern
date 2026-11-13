@@ -1,14 +1,10 @@
-<Project Sdk="Tizen.NET.Sdk/1.2.1">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>tizen60</TargetFramework>
+    <TargetFramework>net8.0-tizen10.0</TargetFramework>
     <AssemblyName>OmegaTube</AssemblyName>
     <RootNamespace>OmegaTube</RootNamespace>
-    <!-- Lowest supported NUI build: Tizen 5.5 (API 6, 2020 TVs). Compile against the oldest TizenFX so APIs
-         missing there fail at build time; newer members go through reflection (see Widgets.Round). The core
-         is loaded from memory on 5.5 because UEP refuses the file (NativeCore.cs, issue #15). -->
-    <TizenNetPackageVersion>6.0.0.14995</TizenNetPackageVersion>
     <LangVersion>latest</LangVersion>
   </PropertyGroup>
 

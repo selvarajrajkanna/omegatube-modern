@@ -48,49 +48,18 @@ namespace OmegaTube.Ui
             label.FontStyle = style;
         }
 
-        // View.CornerRadius is a float up to API 8 and a Vector4 after (the float setter is gone on
-        // Tizen 7+), so it is set through whichever type the running TizenFX has. Older TizenFX (before API 8)
-        // have no CornerRadius at all: the view simply stays square.
-        private static readonly System.Reflection.PropertyInfo cornerRadius = typeof(View).GetProperty("CornerRadius");
-
         public static T Round<T>(T view, float radius) where T : View
         {
-            if (cornerRadius == null || !cornerRadius.CanWrite)
+            if (radius > 0f)
             {
-                return view;
-            }
-            try
-            {
-                object value = cornerRadius.PropertyType == typeof(float)
-                    ? radius
-                    : System.Activator.CreateInstance(cornerRadius.PropertyType, radius, radius, radius, radius);
-                cornerRadius.SetValue(view, value);
-            }
-            catch (System.Exception e)
-            {
-                Tizen.Log.Warn("OmegaTube", "CornerRadius: " + e.Message);
+                view.CornerRadius = new Vector4(radius, radius, radius, radius);
             }
             return view;
         }
 
-        // DALi corner radius lives at MixColor + 3 in the visual property map (devel API). TizenFX 6.0 (the
-        // Tizen 5.5 baseline) exposes no View.CornerRadius, but the firmware's DALi still honours this raw key
-        // on a visual, so colour fills and images round even there. We set it on the visual AND call Round()
-        // (for the TizenFX versions that do have CornerRadius).
-        private static readonly int VisualCornerRadius = (int)Visual.Property.MixColor + 3;
-
-        // A rounded solid-colour fill, applied as a ColorVisual (so it rounds on Tizen 5.5). Call it again
-        // to recolour later without losing the radius (a plain BackgroundColor assignment would drop it).
         public static void FillRounded(View v, Color color, float radius)
         {
-            var map = new PropertyMap();
-            map.Add((int)Visual.Property.Type, new PropertyValue((int)Visual.Type.Color));
-            map.Add((int)ColorVisualProperty.MixColor, new PropertyValue(color));
-            if (radius > 0f)
-            {
-                map.Add(VisualCornerRadius, new PropertyValue(radius));
-            }
-            v.Background = map;
+            v.BackgroundColor = color;
             Round(v, radius);
         }
 

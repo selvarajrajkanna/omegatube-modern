@@ -5,50 +5,11 @@ using System.Runtime.InteropServices;
 namespace OmegaTube
 {
     // Bindings to libomegacore.so (see core/include/omega/core.h).
-    //
-    // Loading the core under Samsung UEP (GitHub issue #15)
-    // -----------------------------------------------------
-    // On Tizen 6.0+ the dynamic linker maps app/OmegaTube/lib/libomegacore.so by path and all is well. On
-    // Tizen 5.5 and older, UEP refuses to make an unsigned library's segments executable: a file/fd-backed
-    // PROT_EXEC mmap is rejected (confirmed on-device: "failed to map segment"), so both dlopen-by-path and the
-    // memfd route fail. UEP does, however, allow anonymous executable memory (also confirmed on-device). So
-    // there are three routes, tried in order, and the one that worked is reported in bug reports (LoadRoute):
-    //   1. "file path" - dlopen(path)                      (Tizen 6.0+, the fast path, unchanged)
-    //   2. "memfd"     - dlopen("/proc/self/fd/<n>")       (a file-free dlopen; works where only path lookup is gated)
-    //   3. "custom-elf"- ElfLoader maps the segments into anonymous memory and relocates them by hand
-    // Because the custom route has no OS library handle, every native function is called through a function
-    // pointer resolved either from the dlopen handle (dlsym) or from the custom image, so all three routes share
-    // one set of bindings below.
     public static class NativeCore
     {
         private const string Lib = "omegacore";
 
         private const int RtldNow = 2;
-        private const uint MfdCloexec = 1;
-        private const int ProtRead = 1, ProtWrite = 2, ProtExec = 4, MapPrivate = 2, MapAnon = 0x20;
-
-        // glibc only grew a memfd_create() wrapper in 2.27; Tizen 5.5 ships glibc 2.24, so a direct
-        // [DllImport("libc", "memfd_create")] would throw EntryPointNotFoundException there. The kernel syscall
-        // exists since Linux 3.17, so go through libc's syscall(). Every argument is IntPtr (native word), not
-        // long: glibc's `long int syscall(long int, ...)` is 32-bit on armv7, so a 64-bit C# long would occupy
-        // two registers and shift the later args into the wrong slots (seen as EINVAL on the TV, issue #15).
-        [DllImport("libc", EntryPoint = "syscall", SetLastError = true)]
-        private static extern IntPtr syscall(IntPtr number, byte[] name, IntPtr flags);
-
-        [DllImport("libc", SetLastError = true)]
-        private static extern IntPtr write(int fd, IntPtr buf, IntPtr count);
-
-        [DllImport("libc", SetLastError = true)]
-        private static extern int close(int fd);
-
-        [DllImport("libc", EntryPoint = "mmap", SetLastError = true)]
-        private static extern IntPtr Mmap(IntPtr addr, UIntPtr length, int prot, int flags, int fd, IntPtr offset);
-
-        [DllImport("libc", EntryPoint = "mprotect", SetLastError = true)]
-        private static extern int Mprotect(IntPtr addr, UIntPtr len, int prot);
-
-        [DllImport("libc", EntryPoint = "munmap")]
-        private static extern int Munmap(IntPtr addr, UIntPtr len);
 
         [DllImport("libdl.so.2", EntryPoint = "dlopen", SetLastError = true)]
         private static extern IntPtr DlOpen(string file, int mode);
@@ -59,27 +20,10 @@ namespace OmegaTube
         [DllImport("libdl.so.2", EntryPoint = "dlerror")]
         private static extern IntPtr DlError();
 
-        private static int MemfdCreate(string name, uint flags)
-        {
-            int nr;
-            switch (RuntimeInformation.ProcessArchitecture)
-            {
-                case Architecture.Arm: nr = 385; break;    // armv7 EABI (the TV)
-                case Architecture.Arm64: nr = 279; break;
-                case Architecture.X64: nr = 319; break;
-                case Architecture.X86: nr = 356; break;
-                default: throw new PlatformNotSupportedException("memfd_create: unknown arch " + RuntimeInformation.ProcessArchitecture);
-            }
-            byte[] raw = System.Text.Encoding.ASCII.GetBytes(name ?? "");
-            Array.Resize(ref raw, raw.Length + 1);  // NUL-terminated
-            return (int)(long)syscall((IntPtr)nr, raw, (IntPtr)flags);
-        }
-
-        // "file path", "memfd", "custom-elf", or the failure detail - shown in bug reports so a Tizen 5.5 owner
-        // can confirm which route the fix used (issue #15).
+        // "file path" or the dlopen failure detail (shown in bug reports).
         public static string LoadRoute { get; private set; } = "not attempted";
 
-        // Resolves an exported symbol of the loaded core, whatever route loaded it.
+        // Resolves an exported symbol of the loaded core.
         private static Func<string, IntPtr> sym;
         private static readonly object loadLock = new object();
         private static bool loaded;
@@ -87,8 +31,7 @@ namespace OmegaTube
         // Kept for the call site in OnCreate; loads the core (see EnsureLoaded).
         public static void RegisterResolver() => EnsureLoaded();
 
-        // Loads the core once, trying each route in turn, then binds the function pointers. Throws
-        // DllNotFoundException (with the per-route detail in LoadRoute) if every route fails.
+        // Loads the core once via dlopen, then binds the function pointers.
         public static void EnsureLoaded()
         {
             if (loaded)
@@ -112,43 +55,9 @@ namespace OmegaTube
                     loaded = true;
                     return;
                 }
-                string fileError = DlErrorString();
-
-                string memfdError;
-                try
-                {
-                    IntPtr m = LoadFromMemory(path);
-                    if (m != IntPtr.Zero)
-                    {
-                        sym = n => DlSym(m, n);
-                        LoadRoute = "memfd";
-                        Bind();
-                        loaded = true;
-                        return;
-                    }
-                    memfdError = "returned null";
-                }
-                catch (Exception e)
-                {
-                    memfdError = e.Message;
-                }
-
-                // UEP blocks fd-backed executable mappings but allows anonymous ones: map the core ourselves.
-                try
-                {
-                    ElfImage img = ElfLoader.Load(File.ReadAllBytes(path));
-                    sym = img.GetSymbol;
-                    LoadRoute = "custom-elf";
-                    Bind();
-                    loaded = true;
-                    return;
-                }
-                catch (Exception e)
-                {
-                    LoadRoute = "all routes failed: file(" + fileError + ") memfd(" + memfdError + ") custom(" + e.Message + "); " + ExecProbe();
-                    Tizen.Log.Error("OmegaTube", LoadRoute);
-                    throw new DllNotFoundException(LoadRoute);
-                }
+                LoadRoute = "dlopen failed: " + DlErrorString();
+                Tizen.Log.Error("OmegaTube", LoadRoute);
+                throw new DllNotFoundException(LoadRoute);
             }
         }
 
@@ -160,73 +69,6 @@ namespace OmegaTube
                 throw new EntryPointNotFoundException("omegacore: " + name);
             }
             return Marshal.GetDelegateForFunctionPointer<T>(p);
-        }
-
-        // dlopen an in-memory copy of the library so no on-disk file is mapped (route 2).
-        private static IntPtr LoadFromMemory(string path)
-        {
-            byte[] bytes = File.ReadAllBytes(path);  // reading the file is allowed; only mapping it is blocked
-            int fd = MemfdCreate("omegacore", MfdCloexec);
-            if (fd < 0)
-            {
-                throw new InvalidOperationException("memfd_create errno " + Marshal.GetLastWin32Error());
-            }
-            try
-            {
-                WriteAll(fd, bytes);
-                IntPtr h = DlOpen("/proc/self/fd/" + fd, RtldNow);
-                if (h == IntPtr.Zero)
-                {
-                    throw new InvalidOperationException(
-                        "dlopen(memfd) null (bytes=" + bytes.Length + " fd=" + fd + " errno=" + Marshal.GetLastWin32Error()
-                        + " dlerror=" + DlErrorString() + ")");
-                }
-                return h;
-            }
-            finally
-            {
-                close(fd);
-            }
-        }
-
-        private static void WriteAll(int fd, byte[] bytes)
-        {
-            GCHandle pin = GCHandle.Alloc(bytes, GCHandleType.Pinned);
-            try
-            {
-                IntPtr basePtr = pin.AddrOfPinnedObject();
-                long remaining = bytes.Length;
-                long offset = 0;
-                while (remaining > 0)
-                {
-                    IntPtr n = write(fd, basePtr + (int)offset, (IntPtr)remaining);
-                    long written = n.ToInt64();
-                    if (written <= 0)
-                    {
-                        throw new IOException("write to memfd failed, errno " + Marshal.GetLastWin32Error());
-                    }
-                    offset += written;
-                    remaining -= written;
-                }
-            }
-            finally
-            {
-                pin.Free();
-            }
-        }
-
-        // Whether this device lets us run unsigned code at all (part of the bug report if every route fails).
-        private static string ExecProbe()
-        {
-            IntPtr fail = (IntPtr)(-1);
-            var sb = new System.Text.StringBuilder("exec-probe ");
-            IntPtr p = Mmap(IntPtr.Zero, (UIntPtr)4096, ProtRead | ProtWrite | ProtExec, MapPrivate | MapAnon, -1, IntPtr.Zero);
-            if (p == fail) { sb.Append("anon-rwx=DENIED(errno " + Marshal.GetLastWin32Error() + ")"); }
-            else { sb.Append("anon-rwx=OK"); Munmap(p, (UIntPtr)4096); }
-            IntPtr q = Mmap(IntPtr.Zero, (UIntPtr)4096, ProtRead | ProtWrite, MapPrivate | MapAnon, -1, IntPtr.Zero);
-            if (q == fail) { sb.Append(" rw->rx=rw-mmap-failed(errno " + Marshal.GetLastWin32Error() + ")"); }
-            else { int r = Mprotect(q, (UIntPtr)4096, ProtRead | ProtExec); sb.Append(r == 0 ? " rw->rx=OK" : " rw->rx=DENIED(errno " + Marshal.GetLastWin32Error() + ")"); Munmap(q, (UIntPtr)4096); }
-            return sb.ToString();
         }
 
         private static string DlErrorString()
