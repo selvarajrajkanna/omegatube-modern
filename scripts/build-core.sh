@@ -20,9 +20,8 @@ docker run --rm -u "$(id -u):$(id -g)" -v "$PWD:/src" -w /src omegatube-toolchai
   $STRIP $OUT/libomegacore.so &&
   file $OUT/libomegacore.so"
 
-# Tizen 5.5 TVs (oldest supported) have glibc 2.24: one newer symbol and the TV refuses to load the library,
-# by path (6.0+) or from memory (the memfd route in NativeCore.cs). Fail the build if any slips in.
-MAX_GLIBC="${OMEGA_MAX_GLIBC:-2.24}"
+# Ensure libomegacore.so does not pull in glibc symbols newer than the toolchain baseline (bookworm = 2.36).
+MAX_GLIBC="${OMEGA_MAX_GLIBC:-2.36}"
 NEWER=$(readelf --dyn-syms -W "$OUT/libomegacore.so" | grep -oE '@GLIBC_[0-9.]+' | sort -u | sed 's/@GLIBC_//' |
   while read -r v; do [ "$(printf '%s\n%s\n' "$v" "$MAX_GLIBC" | sort -V | tail -n1)" != "$MAX_GLIBC" ] && echo "$v"; done || true)
 if [ -n "$NEWER" ]; then

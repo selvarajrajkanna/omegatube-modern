@@ -1,7 +1,7 @@
-cmake_minimum_required(VERSION 3.13)
+cmake_minimum_required(VERSION 3.16)
 project(omegacore C CXX)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(OMEGA_DEPS ${CMAKE_CURRENT_SOURCE_DIR}/../build/deps CACHE PATH "third-party sources (scripts/fetch-deps.sh)")
