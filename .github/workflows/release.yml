@@ -32,7 +32,7 @@ jobs:
           dotnet-version: 10.0.x
 
       - name: Install Tizen workload
-        run: dotnet workload install tizen
+        run: curl -sSL https://raw.githubusercontent.com/Samsung/Tizen.NET/main/workload/scripts/workload-install.sh | bash
 
       - name: Fetch third-party sources
         run: scripts/fetch-deps.sh
