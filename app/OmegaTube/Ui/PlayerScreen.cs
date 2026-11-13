@@ -936,7 +936,8 @@ namespace OmegaTube.Ui
             if (player != IntPtr.Zero)
             {
                 NativeCore.PlayerGetStats(player, out stats);
-                if (stats.Reconnecting != 0)
+                bool starved = stats.State != 3 || stats.VideoQueuedMs < 1000 || stats.AudioQueuedMs < 1000;
+                if (stats.Reconnecting != 0 && starved)
                 {
                     ShowLoading(T("Reconnecting…"), opaque: false);   // over the last frame
                 }
