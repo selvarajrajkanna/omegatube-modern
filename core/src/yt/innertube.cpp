@@ -1568,28 +1568,6 @@ bool comment_action(const std::string& video_id, const std::string& comment_id, 
     return true;
 }
 
-bool vote_counts(const std::string& video_id, int64_t& likes, int64_t& dislikes, std::string& error) {
-    likes = dislikes = -1;
-    std::string api = cfg::str({"returnYouTubeDislike", "api"});
-    if (api.empty()) api = "https://returnyoutubedislikeapi.com";
-    net::Request req;
-    req.url = api + "/votes?videoId=" + video_id;
-    req.headers = {{"User-Agent", "OmegaTube"}};
-    net::Response res = net::fetch(req);
-    if (!res.ok()) {
-        error = http_error("ryd", res);
-        return false;
-    }
-    json r = json::parse(res.body, nullptr, false);
-    if (!r.is_object()) {
-        error = "ryd: invalid json";
-        return false;
-    }
-    likes = to_int(r, "likes");
-    dislikes = to_int(r, "dislikes");
-    return true;
-}
-
 bool account_info(const std::string& access_token, AccountInfo& out, std::string& error) {
     ClientDef def = client_def("browse", "");
     json body = {{"context", {{"client", def.client}}}};

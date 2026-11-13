@@ -641,16 +641,11 @@ char* omega_yt_details(const char* video_id) {
     std::string token = omega::yt::shared_auth().signed_in() ? omega::yt::shared_auth().access_token(error) : "";
     omega::yt::VideoDetails d;
     if (!omega::yt::shared_client().details(id, token, d, error)) return to_c_json({{"error", error}});
-    int64_t likes = -1, dislikes = -1;
-    std::string vote_error;
-    if (!omega::yt::vote_counts(id, likes, dislikes, vote_error)) OLOG("details %s: %s", id.c_str(), vote_error.c_str());
     return to_c_json({{"channelId", d.channel_id},
                       {"channel", d.channel},
                       {"channelAvatar", d.channel_avatar},
                       {"subscribers", d.subscribers},
                       {"date", d.date},
-                      {"likes", likes},
-                      {"dislikes", dislikes},
                       {"likeStatus", d.like_status},
                       {"subscribed", d.subscribed}});
 }

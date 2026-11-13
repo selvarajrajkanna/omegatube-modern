@@ -122,9 +122,8 @@ OMEGA_API char* omega_yt_playlist(const char* video_id, const char* playlist_id)
 OMEGA_API char* omega_yt_playlist_page(const char* playlist_id, const char* continuation);
 // Related videos of video_id (player suggestions). Same JSON as search.
 OMEGA_API char* omega_yt_related(const char* video_id);
-// Watch-page details: {"channelId","channel","channelAvatar","subscribers","date","likes","dislikes",
+// Watch-page details: {"channelId","channel","channelAvatar","subscribers","date",
 // "likeStatus":"LIKE|DISLIKE|INDIFFERENT|" (empty: signed out),"subscribed":1|0|-1} or {"error"}.
-// likes / dislikes: Return YouTube Dislike estimates, -1 when unknown.
 OMEGA_API char* omega_yt_details(const char* video_id);
 // As the signed-in account: rating "like" | "dislike" | "none"; (un)subscribe. {"ok":true} or {"error"}.
 OMEGA_API char* omega_yt_rate(const char* video_id, const char* rating);

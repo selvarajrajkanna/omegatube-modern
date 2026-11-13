@@ -224,9 +224,6 @@ bool post_reply(const std::string& video_id, const std::string& comment_id, cons
 bool comment_action(const std::string& video_id, const std::string& comment_id, const std::string& action,
                     const std::string& access_token, std::string& error);
 
-// Return YouTube Dislike estimates (returnyoutubedislikeapi.com): likes, dislikes; -1 when unknown.
-bool vote_counts(const std::string& video_id, int64_t& likes, int64_t& dislikes, std::string& error);
-
 // Name and avatar of the signed-in account (TV client accounts_list).
 struct AccountInfo {
     std::string name, handle, photo;

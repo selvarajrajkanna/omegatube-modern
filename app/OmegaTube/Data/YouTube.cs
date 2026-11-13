@@ -78,7 +78,6 @@ namespace OmegaTube.Data
     public class VideoDetails
     {
         public string ChannelId = "", Channel = "", ChannelAvatar = "", Subscribers = "", Date = "";
-        public long Likes = -1, Dislikes = -1;      // Return YouTube Dislike estimates
         public string LikeStatus = "";             // LIKE | DISLIKE | INDIFFERENT | "" (signed out)
         public int Subscribed = -1;                // 1 / 0 / -1 unknown
         public string Error;
@@ -140,7 +139,6 @@ namespace OmegaTube.Data
         public List<VideoItem> Items = new List<VideoItem>();
         public string Continuation = "";
         public Func<string, Task<FeedPage>> Loader;   // more items of this row; null: YouTube.Browse("", Continuation)
-        public bool Grid;   // Glorious: a fixed row of the grid under the featured row (no sliding, an optional heading)
     }
 
     // Async wrappers over the native core's YouTube data calls (network runs on the thread pool,
@@ -178,8 +176,7 @@ namespace OmegaTube.Data
                 {
                     ChannelId = Json.Str(root, "channelId"), Channel = Json.Str(root, "channel"),
                     ChannelAvatar = Json.Str(root, "channelAvatar"), Subscribers = Json.Str(root, "subscribers"),
-                    Date = Json.Str(root, "date"), Likes = (long)Json.Num(root, "likes", -1),
-                    Dislikes = (long)Json.Num(root, "dislikes", -1), LikeStatus = Json.Str(root, "likeStatus"),
+                    Date = Json.Str(root, "date"), LikeStatus = Json.Str(root, "likeStatus"),
                     Subscribed = (int)Json.Num(root, "subscribed", -1), Error = Json.Str(root, "error", null),
                 };
             });

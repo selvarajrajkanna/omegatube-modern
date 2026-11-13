@@ -14,7 +14,7 @@ namespace OmegaTube.Ui
     public class FeedRow : View
     {
         private const int VisibleAhead = 6;
-        private const int StripY = 64, GridStripY = 28;
+        private const int StripY = 64;
 
         public string Title { get; }
         public string Query { get; }   // search rows only (used by "add to home")
@@ -47,12 +47,7 @@ namespace OmegaTube.Ui
         private readonly int leftInset;   // x of the focused card; earlier cards slide left of it (under the nav)
         public int RowHeight { get; }    // as built (a managed copy: the list lays rows out without native reads)
         public bool Shown { get; private set; } = true;   // managed mirror of Visibility
-        private readonly bool glass;     // Glorious home: glass cards (the other users of FeedRow keep the classic look)
-        private readonly bool grid;      // Glorious grid row: the cards stay put (no sliding strip), focus moves along them
-        private readonly int stripY;
-        public bool IsGrid => grid;
-        private int SlideX => grid ? leftInset : leftInset - FocusIndex * Step;
-        private readonly bool thumbOnly;  // Glorious featured row: bare thumbnails (title/meta live on the hero)
+        private int SlideX => leftInset - FocusIndex * Step;
 
         private int Step => cardWidth + cardGap;
 
@@ -61,22 +56,16 @@ namespace OmegaTube.Ui
             Query = query;
         }
 
-        // cardWidth / leftInset default to the Omega look; the Glorious home passes a larger featured width and
-        // an inset that clears the nav column.
         public FeedRow(string title, Func<string, Task<FeedPage>> loader, int width,
                        int cardWidth = Theme.CardWidth, int leftInset = Theme.FocusMargin, int rowHeight = Theme.RowHeight,
-                       bool thumbOnly = false, int cardGap = Theme.CardGap, bool grid = false, bool glass = false)
+                       int cardGap = Theme.CardGap)
         {
             Title = title;
             this.loader = loader;
             this.cardWidth = cardWidth;
             this.cardGap = cardGap;
             this.leftInset = leftInset;
-            this.thumbOnly = thumbOnly;
-            this.grid = grid;
-            this.glass = glass;
             RowHeight = rowHeight;
-            stripY = grid && title.Length == 0 ? GridStripY : StripY;
             pump = BuildNext;
             RequestWork = () => UiWork.Request(pump);
             Size = new Size(width, rowHeight);
@@ -89,7 +78,7 @@ namespace OmegaTube.Ui
             status.Position = new Position(leftInset, 140);
             Add(status);
 
-            strip = new View { Position = new Position(leftInset, stripY), Size = new Size(20000, Theme.CardHeight(cardWidth) + 40) };
+            strip = new View { Position = new Position(leftInset, StripY), Size = new Size(20000, Theme.CardHeight(cardWidth) + 40) };
             Add(strip);
         }
 
@@ -156,7 +145,7 @@ namespace OmegaTube.Ui
                 }
                 else
                 {
-                    card = new Card(items[i], cardWidth, thumbOnly, glass) { Position = new Position(i * Step, 16) };
+                    card = new Card(items[i], cardWidth) { Position = new Position(i * Step, 16) };
                     strip.Add(card);
                 }
                 cards.Add(card);
@@ -167,7 +156,7 @@ namespace OmegaTube.Ui
                 c.Dispose();
             }
             FocusIndex = Math.Min(FocusIndex, Math.Max(0, items.Count - 1));
-            slide = Widgets.Slide(strip, SlideX, stripY, slide);
+            slide = Widgets.Slide(strip, SlideX, StripY, slide);
         }
 
         // Builds the (unfilled, cheap) cards up to index `last`.
@@ -176,7 +165,7 @@ namespace OmegaTube.Ui
             last = Math.Min(last, items.Count - 1);
             while (cards.Count <= last)
             {
-                var card = new Card(items[cards.Count], cardWidth, thumbOnly, glass) { Position = new Position(cards.Count * Step, 16) };
+                var card = new Card(items[cards.Count], cardWidth) { Position = new Position(cards.Count * Step, 16) };
                 cards.Add(card);
                 strip.Add(card);
             }
@@ -253,24 +242,6 @@ namespace OmegaTube.Ui
             UpdateVisible();
         }
 
-        // Grid rows: put the focus on this column (moving up / down between rows keeps the column).
-        public void FocusAt(int index)
-        {
-            if (items.Count == 0)
-            {
-                return;
-            }
-            index = Math.Max(0, Math.Min(items.Count - 1, index));
-            EnsureCards(index);
-            if (FocusIndex < cards.Count)
-            {
-                cards[FocusIndex].SetFocused(false);
-            }
-            FocusIndex = index;
-            slide = Widgets.Slide(strip, SlideX, stripY, slide);
-            UpdateVisible();
-        }
-
         // Returns false when the move would leave the row (so the caller can move focus elsewhere).
         public bool Move(int delta)
         {
@@ -283,7 +254,7 @@ namespace OmegaTube.Ui
             cards[FocusIndex].SetFocused(false);
             FocusIndex = next;
             cards[FocusIndex].SetFocused(true);
-            slide = Widgets.Slide(strip, SlideX, stripY, slide);
+            slide = Widgets.Slide(strip, SlideX, StripY, slide);
             UpdateVisible();
             MaybeLoadMore();
             return true;
@@ -328,7 +299,7 @@ namespace OmegaTube.Ui
             }
             for (int i = 0; i < cards.Count; i++)
             {
-                cards[i].SetShown(grid || (i >= FocusIndex - 2 && i < FocusIndex + VisibleAhead + 2));   // a grid row's few cards all stay
+                cards[i].SetShown(i >= FocusIndex - 2 && i < FocusIndex + VisibleAhead + 2);
             }
             RequestWork();
         }
@@ -348,17 +319,6 @@ namespace OmegaTube.Ui
                 {
                     cards[i].Fill();
                     return true;
-                }
-            }
-            if (grid)
-            {
-                for (int i = 0; i < FocusIndex && i < cards.Count; i++)   // the cards left of the focus are on screen too
-                {
-                    if (!cards[i].Filled)
-                    {
-                        cards[i].Fill();
-                        return true;
-                    }
                 }
             }
             if (FocusIndex > 0 && FocusIndex - 1 < cards.Count && !cards[FocusIndex - 1].Filled)

@@ -279,11 +279,9 @@ int main(int argc, char** argv) {
             printf("details failed: %s\n", error.c_str());
             return 1;
         }
-        int64_t likes = -1, dislikes = -1;
-        if (!omega::yt::vote_counts(argv[2], likes, dislikes, error)) printf("ryd failed: %s\n", error.c_str());
-        printf("channel '%s' (%s) %s\navatar %s\ndate '%s'\nlikes %lld dislikes %lld\nlikeStatus '%s' subscribed %d%s\n",
+        printf("channel '%s' (%s) %s\navatar %s\ndate '%s'\nlikeStatus '%s' subscribed %d%s\n",
                d.channel.c_str(), d.channel_id.c_str(), d.subscribers.c_str(), d.channel_avatar.c_str(), d.date.c_str(),
-               static_cast<long long>(likes), static_cast<long long>(dislikes), d.like_status.c_str(), d.subscribed,
+               d.like_status.c_str(), d.subscribed,
                token.empty() ? "  (signed out: run --signin for the account state)" : "");
         return 0;
     }

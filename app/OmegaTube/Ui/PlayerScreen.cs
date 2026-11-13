@@ -703,8 +703,8 @@ namespace OmegaTube.Ui
             sub.Label.Text = sub.Active ? T("Subscribed") : T("Subscribe");
             like.Active = details.LikeStatus == "LIKE";
             dislike.Active = details.LikeStatus == "DISLIKE";
-            like.Label.Text = details.Likes >= 0 ? FormatCount(details.Likes) : T("Like");
-            dislike.Label.Text = details.Dislikes >= 0 ? FormatCount(details.Dislikes) : T("Dislike");
+            like.Label.Text = T("Like");
+            dislike.Label.Text = T("Dislike");
             LayoutChips();
         }
 
@@ -758,15 +758,12 @@ namespace OmegaTube.Ui
             Toast(subscribe ? T("Subscription added") : T("Subscription removed"));
         }
 
-        // Pressing the current rating again removes it; counts follow (they are estimates anyway).
+        // Pressing the current rating again removes it.
         private async Task Rate(string wanted)
         {
             socialBusy = true;
             string before = details.LikeStatus;
-            long likes = details.Likes, dislikes = details.Dislikes;
             string next = before == wanted ? "INDIFFERENT" : wanted;
-            Adjust(before, -1);
-            Adjust(next, +1);
             details.LikeStatus = next;
             UpdateSocial();
             string error = await YouTube.Rate(item.Id, next == "LIKE" ? "like" : next == "DISLIKE" ? "dislike" : "none");
@@ -778,22 +775,8 @@ namespace OmegaTube.Ui
             if (error != null)
             {
                 details.LikeStatus = before;
-                details.Likes = likes;
-                details.Dislikes = dislikes;
                 UpdateSocial();
                 Toast(T("Failed: {0}", error));
-            }
-        }
-
-        private void Adjust(string status, int delta)
-        {
-            if (status == "LIKE" && details.Likes >= 0)
-            {
-                details.Likes = Math.Max(0, details.Likes + delta);
-            }
-            else if (status == "DISLIKE" && details.Dislikes >= 0)
-            {
-                details.Dislikes = Math.Max(0, details.Dislikes + delta);
             }
         }
 

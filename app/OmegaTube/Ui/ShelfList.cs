@@ -24,16 +24,8 @@ namespace OmegaTube.Ui
         public View FocusedCardView => rows.Count > 0 ? rows[focus].FocusedCard : null;
         public List<VideoItem> ItemsAfterFocus(int count) => rows.Count > 0 ? rows[focus].ItemsAfterFocus(count) : new List<VideoItem>();
 
-        // Glorious hero mode: the first row sits below the hero text; moving off it scrolls the rows up to fill
-        // the screen (and the home screen hides the hero). RowChanged fires when the focused row changes.
-        public System.Action RowChanged;
-        private const int HeroFirstRowTop = Theme.HeroFirstRowTop;   // push row 0 low so the hero backdrop gets most of the screen
-
         private readonly int width;
-        private readonly int leftInset;   // Glorious: rows start here; earlier cards slide under the nav
-        private readonly bool bigFirst;   // Glorious: the first (recommendations) row uses large featured cards
-        private readonly bool heroMode;   // Glorious: hero backdrop on row 0 only
-        private int lastReportedRow = -1;
+        private readonly int leftInset;
         private readonly View content;
         private readonly TextLabel status;
         private readonly List<FeedRow> rows = new List<FeedRow>();
@@ -45,12 +37,10 @@ namespace OmegaTube.Ui
         private readonly Func<bool> pump;
         private Animation scroll;
 
-        public ShelfList(int width, int height, int leftInset = Theme.FocusMargin, bool bigFirst = false, bool heroMode = false)
+        public ShelfList(int width, int height, int leftInset = Theme.FocusMargin)
         {
             this.width = width;
             this.leftInset = leftInset;
-            this.bigFirst = bigFirst;
-            this.heroMode = heroMode;
             pump = BuildNext;
             Size = new Size(width, height);
             ClippingMode = ClippingModeType.ClipChildren;
@@ -62,17 +52,7 @@ namespace OmegaTube.Ui
             Add(status);
         }
 
-        private int RowHeightAt(int i) => bigFirst ? (i == 0 ? Theme.BigRowHeight : Theme.GloriousRowHeight) : Theme.RowHeight;
-
-        // Rows differ in height (featured, regular, grid rows with or without a heading): a row starts under the ones
-        // before it. Managed heights only; a long feed has hundreds of rows.
-        private int RowTop(int i)
-        {
-            int y = 0;
-            for (int k = 0; k < i && k < rows.Count; k++)
-            {
-                y += rows[k].RowHeight;
-            }
+        private int RowTop(int i) => i * Theme.RowHeight;
             return y;
         }
 
@@ -170,10 +150,9 @@ namespace OmegaTube.Ui
         {
             foreach (Shelf s in shelves)
             {
-                bool grid = s.Grid;
-                string title = grid || s.Title.Length > 0 ? s.Title : T("Recommended");
+                string title = s.Title.Length > 0 ? s.Title : T("Recommended");
                 int i = rows.Count;
-                FeedRow row = reuse != null && i < reuse.Count && reuse[i]?.Title == title && reuse[i].IsGrid == grid ? reuse[i] : null;
+                FeedRow row = reuse != null && i < reuse.Count && reuse[i]?.Title == title ? reuse[i] : null;
                 if (row != null)
                 {
                     reuse[i] = null;
@@ -181,12 +160,8 @@ namespace OmegaTube.Ui
                 else
                 {
                     // Items beyond the shelf's first ones: the same browse call with the row's continuation.
-                    bool big = bigFirst && i == 0;
                     row = new FeedRow(title, s.Loader ?? (c => YouTube.Browse("", c)), width,
-                                      big ? Theme.BigCardWidth : grid ? Theme.GridCardWidth : Theme.CardWidth, leftInset,
-                                      grid ? (title.Length > 0 ? Theme.GridTitledRowHeight : Theme.GridRowHeight) : RowHeightAt(i),
-                                      thumbOnly: big, cardGap: big ? Theme.BigCardGap : grid ? Theme.GridGap : Theme.CardGap, grid: grid,
-                                      glass: heroMode)
+                                      Theme.CardWidth, leftInset, Theme.RowHeight, Theme.CardGap)
                     {
                         Position = new Position(0, RowTop(i)),
                         RequestWork = () => UiWork.Request(pump),
@@ -321,13 +296,8 @@ namespace OmegaTube.Ui
                     int next = Math.Max(0, Math.Min(rows.Count - 1, focus + (key == "Up" ? -1 : 1)));
                     if (next != focus)
                     {
-                        int column = rows[focus].FocusIndex;
                         rows[focus].SetFocused(false);
                         focus = next;
-                        if (rows[focus].IsGrid)
-                        {
-                            rows[focus].FocusAt(Math.Min(column, Theme.GridColumns - 1));   // keep the column going down the grid
-                        }
                         rows[focus].SetFocused(true);
                         ScrollToFocus();
                         MaybePrefetch();
@@ -337,17 +307,10 @@ namespace OmegaTube.Ui
             return true;
         }
 
-        // The focused row at the top; rows far from it are hidden (nothing to render). In hero mode the first row
-        // is held lower (so the hero title shows above it); moving to any later row scrolls the list up to the top.
+        // The focused row at the top; rows far from it are hidden (nothing to render).
         private void ScrollToFocus()
         {
-            if (focus != lastReportedRow)
-            {
-                lastReportedRow = focus;
-                RowChanged?.Invoke();
-            }
-            float target = heroMode && focus == 0 ? HeroFirstRowTop : -RowTop(focus);
-            scroll = Widgets.Slide(content, 0, target, scroll);
+            scroll = Widgets.Slide(content, 0, -RowTop(focus), scroll);
             for (int i = 0; i < rows.Count; i++)
             {
                 rows[i].SetShown(i >= focus - RowsAround && i <= focus + RowsAround + 1);

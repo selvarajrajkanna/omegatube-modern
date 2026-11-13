@@ -107,16 +107,9 @@ namespace OmegaTube.Ui
         // highlight, rounded at any size. `lit` is the brighter variant for the focused entry. Drawn untinted;
         // tint it through Color (e.g. accent) when needed.
         // `pill` uses the rounder variant (buttons, selected entries) instead of the card one.
-        public static ImageView GlassCard(bool lit, int width, int height, bool pill = false)
-        {
-            string name = (pill ? "glass_pill" : "glass") + (lit ? "_lit" : "") + "9.9";
-            return new ImageView { ResourceUrl = Theme.Image(name), Size = new Size(width, height) };
-        }
-
-        // A card / panel background: glass in Glorious, the flat rounded fill otherwise.
         public static View Panel(Color flat, int width, int height, float radius)
         {
-            return Theme.Glorious ? (View)GlassCard(false, width, height) : Rounded(flat, width, height, radius);
+            return Rounded(flat, width, height, radius);
         }
 
         public static void SetVisible(View view, bool visible)
@@ -193,18 +186,11 @@ namespace OmegaTube.Ui
         {
             private readonly TextLabel label;
             private readonly ImageView icon;
-            private readonly View glassLit;       // Glorious: brighter glass while focused
 
             public PillButton(string text, string iconName, int width, int height = 76)
             {
                 Size = new Size(width, height);
                 Round(this, height / 2f);
-                if (Theme.Glorious)
-                {
-                    Add(GlassCard(false, width, height, true));
-                    glassLit = GlassCard(true, width, height, true);
-                    Add(glassLit);
-                }
                 int x = 34;
                 if (iconName != null)
                 {
@@ -216,13 +202,6 @@ namespace OmegaTube.Ui
                 label = Label(text, Theme.BodySize + 2, Theme.Text, width - x - 24, height);
                 label.VerticalAlignment = VerticalAlignment.Center;
                 label.Position = new Position(x, 0);
-                if (Theme.Glorious && iconName == null)
-                {
-                    // A text-only pill (Yes / No ...): the text sits in the middle.
-                    label.Size = new Size(width, height);
-                    label.Position = new Position(0, 0);
-                    label.HorizontalAlignment = HorizontalAlignment.Center;
-                }
                 Add(label);
                 SetFocused(false);
             }
@@ -235,14 +214,6 @@ namespace OmegaTube.Ui
 
             public void SetFocused(bool focused)
             {
-                if (glassLit != null)
-                {
-                    // Glass: the focused pill is a brighter glass and keeps its light text and icon.
-                    SetVisible(glassLit, focused);
-                    label.TextColor = Theme.Text;
-                    Scale = focused ? new Vector3(1.04f, 1.04f, 1f) : Vector3.One;
-                    return;
-                }
                 BackgroundColor = focused ? Theme.CardInfoFocused : Theme.SurfaceHigh;
                 label.TextColor = focused ? Theme.CardTextFocused : Theme.Text;
                 if (icon != null)
