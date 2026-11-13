@@ -115,6 +115,8 @@ namespace OmegaTube.Ui
         private DateTime toastUntil;
         private long pendingSeekMs = -1;   // accumulated target while the user holds Left/Right
         private DateTime pendingSeekAt;
+        private DateTime seekStartAt;
+        private int seekDirection;
         private NativeCore.PlayerStats stats;
         private List<SkipSegment> segments = new List<SkipSegment>();
         private SkipSegment offered;       // manual segment currently offered with the skip button
@@ -2010,17 +2012,27 @@ namespace OmegaTube.Ui
             {
                 return;
             }
-            int step = App.Config.Player.SeekStepSeconds * 1000 * direction;
+            DateTime now = DateTime.Now;
+            if (pendingSeekMs < 0 || direction != seekDirection)
+            {
+                seekStartAt = now;
+                seekDirection = direction;
+            }
+            // Reverse logarithmic (exponential) ramp: 1x at 0s up to 10x at 10s.
+            double t = Math.Min(1.0, Math.Max(0.0, (now - seekStartAt).TotalSeconds / 10.0));
+            double multiplier = Math.Pow(10.0, t);
+            long step = (long)Math.Round(App.Config.Player.SeekStepSeconds * 1000.0 * multiplier) * direction;
             long basePos = pendingSeekMs >= 0 ? pendingSeekMs : stats.PositionMs;
             pendingSeekMs = Math.Max(0, Math.Min(basePos + step, Math.Max(0, stats.DurationMs - 1000)));
-            pendingSeekAt = DateTime.Now;
-            UpdateChrome(DateTime.Now);
+            pendingSeekAt = now;
+            UpdateChrome(now);
         }
 
         private void CommitSeek()
         {
             long target = pendingSeekMs;
             pendingSeekMs = -1;
+            seekDirection = 0;
             Seek(target);
         }
 
