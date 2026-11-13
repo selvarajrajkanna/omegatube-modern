@@ -16,6 +16,7 @@
 
 #include <algorithm>
 #include <cerrno>
+#include <charconv>
 #include <chrono>
 #include <cstring>
 #include <mutex>
@@ -28,9 +29,11 @@ extern const char omega_cacert_pem[];  // generated from the Mozilla CA bundle (
 namespace omega::net {
 namespace {
 
-bool iequals(const std::string& a, const std::string& b) {
+bool iequals(std::string_view a, std::string_view b) {
     return a.size() == b.size() &&
-           std::equal(a.begin(), a.end(), b.begin(), [](char x, char y) { return tolower(x) == tolower(y); });
+           std::equal(a.begin(), a.end(), b.begin(), [](unsigned char x, unsigned char y) {
+               return tolower(x) == tolower(y);
+           });
 }
 
 bool is_redirect(int status) {
@@ -217,24 +220,34 @@ private:
 
 }  // namespace
 
-bool Url::parse(const std::string& url, Url& out) {
+bool Url::parse(std::string_view url, Url& out) {
     size_t at;
-    if (url.compare(0, 8, "https://") == 0) {
+    if (url.starts_with("https://")) {
         out.tls = true;
         at = 8;
-    } else if (url.compare(0, 7, "http://") == 0) {
+    } else if (url.starts_with("http://")) {
         out.tls = false;
         at = 7;
     } else {
         return false;
     }
     size_t slash = url.find_first_of("/?", at);
-    std::string authority = url.substr(at, slash == std::string::npos ? std::string::npos : slash - at);
-    out.path = slash == std::string::npos ? "/" : url.substr(slash);
-    if (out.path[0] == '?') out.path = "/" + out.path;
+    std::string_view authority = url.substr(at, slash == std::string_view::npos ? std::string_view::npos : slash - at);
+    if (slash == std::string_view::npos) {
+        out.path = "/";
+    } else if (url[slash] == '?') {
+        out.path.assign("/");
+        out.path.append(url.substr(slash));
+    } else {
+        out.path.assign(url.substr(slash));
+    }
     size_t colon = authority.rfind(':');
-    out.host = authority.substr(0, colon);
-    out.port = colon == std::string::npos ? (out.tls ? "443" : "80") : authority.substr(colon + 1);
+    out.host.assign(authority.substr(0, colon));
+    if (colon == std::string_view::npos) {
+        out.port = out.tls ? "443" : "80";
+    } else {
+        out.port.assign(authority.substr(colon + 1));
+    }
     return !out.host.empty();
 }
 
@@ -273,16 +286,22 @@ bool Connection::send(const Request& req) {
     std::string key = (url.tls ? "s:" : "p:") + url.host + ":" + url.port;
     if (!body_done_) close();  // previous body not consumed: cannot reuse
 
-    std::string msg = req.method + " " + url.path + " HTTP/1.1\r\nHost: " + url.host + "\r\n";
+    size_t est = req.method.size() + url.path.size() + url.host.size() + req.body.size() + 128;
+    for (const auto& h : req.headers) est += h.first.size() + h.second.size() + 4;
+    std::string msg;
+    msg.reserve(est);
+    msg.append(req.method).append(" ").append(url.path).append(" HTTP/1.1\r\nHost: ").append(url.host).append("\r\n");
     bool has_ua = false;
     for (const auto& h : req.headers) {
-        msg += h.first + ": " + h.second + "\r\n";
+        msg.append(h.first).append(": ").append(h.second).append("\r\n");
         has_ua |= iequals(h.first, "User-Agent");
     }
-    if (!has_ua) msg += "User-Agent: OmegaTube\r\n";
-    if (!req.body.empty() || req.method == "POST") msg += "Content-Length: " + std::to_string(req.body.size()) + "\r\n";
-    msg += "Connection: keep-alive\r\n\r\n";
-    msg += req.body;
+    if (!has_ua) msg.append("User-Agent: OmegaTube\r\n");
+    if (!req.body.empty() || req.method == "POST") {
+        msg.append("Content-Length: ").append(std::to_string(req.body.size())).append("\r\n");
+    }
+    msg.append("Connection: keep-alive\r\n\r\n");
+    msg.append(req.body);
 
     // A kept-alive socket may have been closed by the server meanwhile: retry once on a fresh one.
     for (int attempt = 0; attempt < 2; ++attempt) {
@@ -328,13 +347,18 @@ bool Connection::read_line(std::string& line) {
             buf_pos_ = 0;
             buf_len_ = static_cast<size_t>(r);
         }
-        char c = static_cast<char>(buf_[buf_pos_++]);
-        if (c == '\n') {
+        const uint8_t* start = buf_.data() + buf_pos_;
+        size_t avail = buf_len_ - buf_pos_;
+        const void* nl = memchr(start, '\n', avail);
+        size_t take = nl ? static_cast<size_t>(static_cast<const uint8_t*>(nl) - start) : avail;
+        if (line.size() + take > 16384) return false;
+        line.append(reinterpret_cast<const char*>(start), take);
+        buf_pos_ += take;
+        if (nl) {
+            ++buf_pos_;  // consume '\n'
             if (!line.empty() && line.back() == '\r') line.pop_back();
             return true;
         }
-        line += c;
-        if (line.size() > 16384) return false;
     }
 }
 
@@ -351,15 +375,20 @@ bool Connection::read_headers() {
     }
     headers_.clear();
     while (read_line(line) && !line.empty()) {
-        size_t colon = line.find(':');
-        if (colon == std::string::npos) continue;
-        size_t v = line.find_first_not_of(" \t", colon + 1);
-        headers_.emplace_back(line.substr(0, colon), v == std::string::npos ? "" : line.substr(v));
+        std::string_view sv(line);
+        size_t colon = sv.find(':');
+        if (colon == std::string_view::npos) continue;
+        size_t v = sv.find_first_not_of(" \t", colon + 1);
+        headers_.emplace_back(sv.substr(0, colon), v == std::string_view::npos ? std::string_view{} : sv.substr(v));
     }
-    std::string cl = header("Content-Length");
-    content_length_ = cl.empty() ? -1 : std::stoll(cl);
-    chunked_ = header("Transfer-Encoding").find("chunked") != std::string::npos;
-    reusable_ = !iequals(header("Connection"), "close") && (chunked_ || content_length_ >= 0);
+    std::string_view cl = header_view("Content-Length");
+    content_length_ = -1;
+    if (!cl.empty()) {
+        int64_t val = -1;
+        if (std::from_chars(cl.data(), cl.data() + cl.size(), val).ec == std::errc{}) content_length_ = val;
+    }
+    chunked_ = header_view("Transfer-Encoding").find("chunked") != std::string_view::npos;
+    reusable_ = !iequals(header_view("Connection"), "close") && (chunked_ || content_length_ >= 0);
     body_done_ = false;
     if (chunked_) {
         remaining_ = 0;
@@ -374,7 +403,10 @@ bool Connection::next_chunk() {
     std::string line;
     if (remaining_ == 0 && !read_line(line)) return false;  // CRLF after previous chunk (not before the first)
     if (line.empty() && !read_line(line)) return false;
-    remaining_ = static_cast<int64_t>(strtoll(line.c_str(), nullptr, 16));
+    int64_t chunk_len = 0;
+    auto res = std::from_chars(line.data(), line.data() + line.size(), chunk_len, 16);
+    if (res.ec != std::errc{} || chunk_len < 0) return false;
+    remaining_ = chunk_len;
     if (remaining_ == 0) {
         while (read_line(line) && !line.empty()) {
         }  // trailers
@@ -424,10 +456,14 @@ std::string Connection::read_all(size_t limit) {
     return out;
 }
 
-std::string Connection::header(const std::string& name) const {
+std::string_view Connection::header_view(std::string_view name) const {
     for (const auto& h : headers_)
         if (iequals(h.first, name)) return h.second;
-    return "";
+    return {};
+}
+
+std::string Connection::header(std::string_view name) const {
+    return std::string(header_view(name));
 }
 
 Response fetch(const Request& req, size_t max_body) {

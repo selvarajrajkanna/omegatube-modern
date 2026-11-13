@@ -1,5 +1,7 @@
 #pragma once
 
+#include <span>
+
 #include "media/demuxer.h"
 
 namespace omega::media {
@@ -29,9 +31,9 @@ private:
 
     bool read_box_header(uint32_t& type, uint64_t& payload);
     bool read_exact(std::vector<uint8_t>& buf, uint64_t n);
-    bool parse_moov(const std::vector<uint8_t>& moov);
-    bool parse_moof(const std::vector<uint8_t>& moof, uint64_t moof_start);
-    void parse_sidx(const std::vector<uint8_t>& sidx, uint64_t sidx_end);
+    bool parse_moov(std::span<const uint8_t> moov);
+    bool parse_moof(std::span<const uint8_t> moof, uint64_t moof_start);
+    void parse_sidx(std::span<const uint8_t> sidx, uint64_t sidx_end);
 
     ReadFn read_;
     uint64_t offset_ = 0;
@@ -45,6 +47,7 @@ private:
     uint32_t pending_type_ = 0;
     uint64_t pending_start_ = 0, pending_payload_start_ = 0;
     std::vector<uint8_t> pending_;
+    std::vector<uint8_t> frag_buf_;
 };
 
 }  // namespace omega::media

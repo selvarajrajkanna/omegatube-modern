@@ -1,5 +1,6 @@
 #include "media/webm.h"
 
+#include <bit>
 #include <cstring>
 
 namespace omega::media {
@@ -65,8 +66,7 @@ struct Cursor {
     // EBML variable-length integer; IDs keep their marker bits, sizes do not.
     bool vint(uint64_t& v, bool keep_marker, bool* unknown = nullptr) {
         if (p >= end || *p == 0) return false;
-        int len = 1;
-        while (!(*p & (0x80 >> (len - 1)))) ++len;
+        int len = std::countl_zero(static_cast<uint8_t>(*p)) + 1;
         if (left() < static_cast<size_t>(len)) return false;
         v = keep_marker ? *p : (*p & (0xFF >> len));
         for (int i = 1; i < len; ++i) v = v << 8 | p[i];
@@ -83,18 +83,8 @@ uint64_t to_uint(Cursor c) {
 }
 
 double to_float(Cursor c) {
-    if (c.left() == 4) {
-        uint32_t bits = static_cast<uint32_t>(to_uint(c));
-        float f;
-        memcpy(&f, &bits, 4);
-        return f;
-    }
-    if (c.left() == 8) {
-        uint64_t bits = to_uint(c);
-        double d;
-        memcpy(&d, &bits, 8);
-        return d;
-    }
+    if (c.left() == 4) return std::bit_cast<float>(static_cast<uint32_t>(to_uint(c)));
+    if (c.left() == 8) return std::bit_cast<double>(to_uint(c));
     return 0;
 }
 
@@ -120,8 +110,7 @@ bool WebmReader::read_vint(uint64_t& value, bool keep_marker, bool& unknown) {
         error_ = "bad EBML vint";
         return false;
     }
-    int len = 1;
-    while (!(b[0] & (0x80 >> (len - 1)))) ++len;
+    int len = std::countl_zero(b[0]) + 1;
     if (keep_marker && len > 4) {
         error_ = "bad EBML id";
         return false;
@@ -215,7 +204,7 @@ bool WebmReader::read_header() {
     return true;
 }
 
-bool WebmReader::parse_info(const std::vector<uint8_t>& info) {
+bool WebmReader::parse_info(std::span<const uint8_t> info) {
     for_each_element(Cursor{info.data(), info.data() + info.size()}, [&](uint32_t id, Cursor c) {
         if (id == kTimecodeScale) timecode_scale_ = to_uint(c);
     });
@@ -227,7 +216,7 @@ bool WebmReader::parse_info(const std::vector<uint8_t>& info) {
     return true;
 }
 
-bool WebmReader::parse_tracks(const std::vector<uint8_t>& tracks) {
+bool WebmReader::parse_tracks(std::span<const uint8_t> tracks) {
     for_each_element(Cursor{tracks.data(), tracks.data() + tracks.size()}, [&](uint32_t id, Cursor entry) {
         if (id != kTrackEntry || track_.track_number) return;  // keep the first video/audio track
         uint64_t number = 0, type = 0, default_duration_ns = 0;
@@ -296,7 +285,7 @@ bool WebmReader::parse_tracks(const std::vector<uint8_t>& tracks) {
     return track_.codec != Codec::Unknown;
 }
 
-void WebmReader::parse_cues(const std::vector<uint8_t>& cues) {
+void WebmReader::parse_cues(std::span<const uint8_t> cues) {
     segments_.clear();
     for_each_element(Cursor{cues.data(), cues.data() + cues.size()}, [&](uint32_t id, Cursor point) {
         if (id != kCuePoint) return;
@@ -354,7 +343,7 @@ void WebmReader::finish_cluster(std::deque<Sample>& out, size_t first) {
 }
 
 bool WebmReader::read_fragment(std::deque<Sample>& out) {
-    std::vector<uint8_t> buf;
+    auto& buf = frag_buf_;
     const size_t first = out.size();
     bool in_cluster = false;
     for (;;) {

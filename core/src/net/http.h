@@ -5,6 +5,7 @@
 #include <functional>
 #include <memory>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -22,7 +23,7 @@ struct Request {
 struct Url {
     bool tls = false;
     std::string host, port, path;  // path includes the query string
-    static bool parse(const std::string& url, Url& out);
+    static bool parse(std::string_view url, Url& out);
 };
 
 class Transport;
@@ -48,7 +49,8 @@ public:
 
     int status() const { return status_; }
     int64_t content_length() const { return content_length_; }
-    std::string header(const std::string& name) const;  // case-insensitive, "" if absent
+    std::string header(std::string_view name) const;  // case-insensitive, "" if absent
+    std::string_view header_view(std::string_view name) const;
     bool body_done() const { return body_done_; }
     const std::string& error() const { return error_; }
 

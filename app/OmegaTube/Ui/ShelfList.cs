@@ -53,8 +53,6 @@ namespace OmegaTube.Ui
         }
 
         private int RowTop(int i) => i * Theme.RowHeight;
-            return y;
-        }
 
         private void LayoutRows()
         {

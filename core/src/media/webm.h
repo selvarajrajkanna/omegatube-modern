@@ -1,5 +1,7 @@
 #pragma once
 
+#include <span>
+
 #include "media/demuxer.h"
 
 namespace omega::media {
@@ -26,9 +28,9 @@ private:
     bool read_element_header(uint32_t& id, uint64_t& size, bool& unknown);
     bool read_exact(std::vector<uint8_t>& buf, uint64_t n);
     bool skip(uint64_t n);
-    bool parse_info(const std::vector<uint8_t>& info);
-    bool parse_tracks(const std::vector<uint8_t>& tracks);
-    void parse_cues(const std::vector<uint8_t>& cues);
+    bool parse_info(std::span<const uint8_t> info);
+    bool parse_tracks(std::span<const uint8_t> tracks);
+    void parse_cues(std::span<const uint8_t> cues);
     bool parse_block(const uint8_t* p, size_t n, bool simple, bool has_reference, std::deque<Sample>& out);
     void finish_cluster(std::deque<Sample>& out, size_t first);
 
@@ -42,6 +44,7 @@ private:
     // An element header read ahead (the first Cluster after the header, or the next Cluster ending a fragment).
     bool has_pending_ = false;
     uint32_t pending_id_ = 0;
+    std::vector<uint8_t> frag_buf_;
 };
 
 }  // namespace omega::media

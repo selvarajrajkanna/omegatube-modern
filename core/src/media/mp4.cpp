@@ -19,9 +19,24 @@ struct Cursor {
     bool has(size_t n) const { return left() >= n; }
     void skip(size_t n) { p += std::min(n, left()); }
     uint8_t u8() { return has(1) ? *p++ : 0; }
-    uint16_t u16() { uint16_t v = 0; for (int i = 0; i < 2 && has(1); ++i) v = uint16_t(v << 8 | *p++); return v; }
-    uint32_t u24() { uint32_t v = 0; for (int i = 0; i < 3 && has(1); ++i) v = v << 8 | *p++; return v; }
-    uint32_t u32() { uint32_t v = 0; for (int i = 0; i < 4 && has(1); ++i) v = v << 8 | *p++; return v; }
+    uint16_t u16() {
+        if (!has(2)) return static_cast<uint16_t>(u8() << 8);
+        uint16_t v = static_cast<uint16_t>((uint16_t(p[0]) << 8) | p[1]);
+        p += 2;
+        return v;
+    }
+    uint32_t u24() {
+        if (!has(3)) { uint32_t v = 0; while (has(1)) v = (v << 8) | *p++; return v; }
+        uint32_t v = (uint32_t(p[0]) << 16) | (uint32_t(p[1]) << 8) | p[2];
+        p += 3;
+        return v;
+    }
+    uint32_t u32() {
+        if (!has(4)) { uint32_t v = 0; while (has(1)) v = (v << 8) | *p++; return v; }
+        uint32_t v = (uint32_t(p[0]) << 24) | (uint32_t(p[1]) << 16) | (uint32_t(p[2]) << 8) | p[3];
+        p += 4;
+        return v;
+    }
     uint64_t u64() { uint64_t hi = u32(); return hi << 32 | u32(); }
 };
 
@@ -148,7 +163,7 @@ bool Fmp4Reader::read_header() {
     return true;
 }
 
-void Fmp4Reader::parse_sidx(const std::vector<uint8_t>& sidx, uint64_t sidx_end) {
+void Fmp4Reader::parse_sidx(std::span<const uint8_t> sidx, uint64_t sidx_end) {
     Cursor c{sidx.data(), sidx.data() + sidx.size()};
     uint8_t version = c.u8();
     c.skip(3 + 4);  // flags, reference_ID
@@ -158,6 +173,7 @@ void Fmp4Reader::parse_sidx(const std::vector<uint8_t>& sidx, uint64_t sidx_end)
     c.skip(2);
     uint16_t count = c.u16();
     if (timescale == 0) return;
+    segments_.reserve(segments_.size() + count);
     uint64_t offset = sidx_end + first_offset;
     uint64_t time = earliest;
     for (uint16_t i = 0; i < count && c.has(12); ++i) {
@@ -173,7 +189,7 @@ void Fmp4Reader::parse_sidx(const std::vector<uint8_t>& sidx, uint64_t sidx_end)
     }
 }
 
-bool Fmp4Reader::parse_moov(const std::vector<uint8_t>& moov) {
+bool Fmp4Reader::parse_moov(std::span<const uint8_t> moov) {
     Cursor root{moov.data(), moov.data() + moov.size()};
     for_each_box(root, [&](uint32_t type, Cursor c) {
         if (type == fourcc("mvex")) {
@@ -311,7 +327,7 @@ bool Fmp4Reader::parse_moov(const std::vector<uint8_t>& moov) {
     return true;
 }
 
-bool Fmp4Reader::parse_moof(const std::vector<uint8_t>& moof, uint64_t moof_start) {
+bool Fmp4Reader::parse_moof(std::span<const uint8_t> moof, uint64_t moof_start) {
     runs_.clear();
     Cursor root{moof.data(), moof.data() + moof.size()};
     for_each_box(root, [&](uint32_t type, Cursor traf) {
@@ -338,6 +354,10 @@ bool Fmp4Reader::parse_moof(const std::vector<uint8_t>& moof, uint64_t moof_star
                 uint32_t flags = vf & 0xffffff;
                 uint32_t count = c.u32();
                 Run run;
+                run.durations.reserve(count);
+                run.sizes.reserve(count);
+                run.flags.reserve(count);
+                run.ctos.reserve(count);
                 int32_t data_offset = (flags & 0x1) ? static_cast<int32_t>(c.u32()) : 0;
                 run.data_start = base + static_cast<uint64_t>(static_cast<int64_t>(data_offset));
                 uint32_t first_flags = (flags & 0x4) ? c.u32() : def_flags;
@@ -358,7 +378,7 @@ bool Fmp4Reader::parse_moof(const std::vector<uint8_t>& moof, uint64_t moof_star
 }
 
 bool Fmp4Reader::read_fragment(std::deque<Sample>& out) {
-    std::vector<uint8_t> buf;
+    auto& buf = frag_buf_;
     for (;;) {
         uint64_t box_start, payload_start;
         uint32_t type;
