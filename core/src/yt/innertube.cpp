@@ -560,13 +560,6 @@ bool Client::player_with(const json& c, const std::string& video_id, VideoInfo& 
                          const std::string& access_token) {
     bool decipher = c.value("decipher", false);
     ClientDef def = client_def_from(c, visitor_data_);
-    if (def.client.value("clientName", "") == "TVHTML5") {
-        std::string v = def.client.value("clientVersion", "");
-        if (v.empty() || v.rfind("5.", 0) == 0) {
-            def.client["clientVersion"] = "7.20260707.07.00";
-            def.version = "7.20260707.07.00";
-        }
-    }
     json body = {
         {"context", {{"client", def.client}}},
         {"videoId", video_id},
@@ -633,7 +626,8 @@ bool Client::player_with(const json& c, const std::string& video_id, VideoInfo& 
         Format fmt;
         if (decipher) {
             std::string err;
-            if (!shared_decipher().stream_url(f.value("url", ""), f.value("signatureCipher", ""), fmt.url, err)) {
+            std::string sc = f.value("signatureCipher", f.value("cipher", ""));
+            if (!shared_decipher().stream_url(f.value("url", ""), sc, fmt.url, err)) {
                 if (failed++ == 0) {
                     first_err = err;
                     OLOG("yt: decipher itag %lld: %s", static_cast<long long>(to_int(f, "itag")), err.c_str());
