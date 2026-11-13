@@ -625,12 +625,19 @@ bool Client::player_with(const json& c, const std::string& video_id, VideoInfo& 
     out.formats.clear();
     out.user_agent = def.user_agent;
     size_t failed = 0;
-    for (const json& f : r["streamingData"].value("adaptiveFormats", json::array())) {
+    size_t total_adaptive = 0;
+    std::string first_err;
+    const json& sd = r.contains("streamingData") && r["streamingData"].is_object() ? r["streamingData"] : json::object();
+    for (const json& f : sd.value("adaptiveFormats", json::array())) {
+        ++total_adaptive;
         Format fmt;
         if (decipher) {
             std::string err;
             if (!shared_decipher().stream_url(f.value("url", ""), f.value("signatureCipher", ""), fmt.url, err)) {
-                if (failed++ == 0) OLOG("yt: decipher itag %lld: %s", static_cast<long long>(to_int(f, "itag")), err.c_str());
+                if (failed++ == 0) {
+                    first_err = err;
+                    OLOG("yt: decipher itag %lld: %s", static_cast<long long>(to_int(f, "itag")), err.c_str());
+                }
                 continue;
             }
         } else {
@@ -683,6 +690,15 @@ bool Client::player_with(const json& c, const std::string& video_id, VideoInfo& 
     OLOG("yt: '%s' by %s, %llds, %zu formats (%s client%s)", out.title.c_str(), out.author.c_str(),
          static_cast<long long>(out.length_s), out.formats.size(), def.client.value("clientName", "").c_str(),
          failed ? (", " + std::to_string(failed) + " not deciphered").c_str() : "");
+    if (out.formats.empty()) {
+        if (total_adaptive == 0) {
+            error = "no adaptiveFormats in streamingData";
+        } else if (failed > 0) {
+            error = std::to_string(failed) + "/" + std::to_string(total_adaptive) + " decipher failed: " + first_err;
+        } else {
+            error = "0 usable of " + std::to_string(total_adaptive) + " adaptiveFormats";
+        }
+    }
     return true;
 }
 
