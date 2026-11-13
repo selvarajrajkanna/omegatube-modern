@@ -461,19 +461,24 @@ namespace OmegaTube.Ui
             spin.Stop();
             spinner.Hide();
             stateLabel.MultiLine = true;
-            stateLabel.Size = new Size(1600, 440);
-            stateLabel.Position = new Position(160, 340);
+            stateLabel.Size = new Size(1600, 560);
+            stateLabel.Position = new Position(160, 280);
             var (title, hint) = ErrorTexts(e);
-            // YouTube's own message says which case it is (private, members only, bot check...); else the technical one.
-            string why = e.Reason.Length > 0 ? e.Reason : e.Kind == "player" || e.Kind == "other" || e.Kind == "formats" ? e.Detail : "";
             var lines = new List<string> { title };
-            if (why.Length > 0)
+            if (e.Reason.Length > 0)
             {
-                lines.Add(why);
+                lines.Add(e.Reason);
             }
             if (hint.Length > 0)
             {
                 lines.Add(hint);
+            }
+            string code = e.Status.Length > 0 ? $"[{e.Status}] " : "";
+            string diag = code + (e.Detail.Length > 0 && e.Detail != e.Reason ? e.Detail : "");
+            diag = diag.Trim();
+            if (diag.Length > 0)
+            {
+                lines.Add(diag);
             }
             lines.Add(T("Back to return"));
             stateLabel.Text = string.Join("\n\n", lines);

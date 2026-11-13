@@ -301,8 +301,15 @@ omega_player* omega_player_create_youtube(void* window, int width, int height, c
         client.skip_client(info.client);
         if (!client.player(video_id, info, error)) {
             OLOG("youtube %s: %s", video_id, error.c_str());
+            std::string refused_list;
+            for (size_t i = 0; i < skipped_clients.size(); ++i) {
+                if (i > 0) refused_list += ", ";
+                refused_list += skipped_clients[i];
+            }
+            std::string detail = "Streams refused (403/410) for: " + refused_list;
+            if (!error.empty()) detail += " | Fallback: " + error;
             // Shown like a bot check: same cause (flagged IP), same advice.
-            set_play_error("login", "STREAM_REFUSED", "", "YouTube refused the video streams");
+            set_play_error("login", "STREAM_REFUSED", "", detail);
             return nullptr;
         }
     }
