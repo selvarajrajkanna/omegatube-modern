@@ -134,7 +134,6 @@ namespace OmegaTube.Ui
 
         public override void OnShow()
         {
-            visible = true;
             if (dirty)
             {
                 ApplyPending(reloadFeed: true);
@@ -533,7 +532,6 @@ namespace OmegaTube.Ui
 
         public override bool OnKey(string key)
         {
-            visible = true;   // a key can only come to the screen on display (belt and braces for a missed resume)
             bool back = key == "XF86Back" || key == "Escape";
             if (inRail)
             {

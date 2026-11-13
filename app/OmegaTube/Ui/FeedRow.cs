@@ -238,7 +238,7 @@ namespace OmegaTube.Ui
                 cards[FocusIndex].SetFocused(false);
             }
             FocusIndex = 0;
-            slide = Widgets.Slide(strip, SlideX, stripY, slide);
+            slide = Widgets.Slide(strip, SlideX, StripY, slide);
             UpdateVisible();
         }
 
