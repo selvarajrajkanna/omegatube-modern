@@ -68,6 +68,7 @@ namespace OmegaTube.Data
     {
         public string ChannelId = "", Channel = "", ChannelAvatar = "", Subscribers = "", Date = "";
         public string LikeStatus = "";             // LIKE | DISLIKE | INDIFFERENT | "" (signed out)
+        public string LikeCount = "";              // display count ("12K"), empty when unavailable
         public int Subscribed = -1;                // 1 / 0 / -1 unknown
         public string Error;
     }
@@ -166,6 +167,7 @@ namespace OmegaTube.Data
                     ChannelId = Json.Str(root, "channelId"), Channel = Json.Str(root, "channel"),
                     ChannelAvatar = Json.Str(root, "channelAvatar"), Subscribers = Json.Str(root, "subscribers"),
                     Date = Json.Str(root, "date"), LikeStatus = Json.Str(root, "likeStatus"),
+                    LikeCount = Json.Str(root, "likeCount"),
                     Subscribed = (int)Json.Num(root, "subscribed", -1), Error = Json.Str(root, "error", null),
                 };
             });

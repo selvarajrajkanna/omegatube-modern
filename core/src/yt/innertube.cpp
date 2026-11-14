@@ -850,6 +850,22 @@ bool Client::details(const std::string& video_id, const std::string& access_toke
         if (const json* sub = find_key(r, "subscribeButtonRenderer"))
             if (sub->is_object()) out.channel_id = sub->value("channelId", "");
     if (out.channel_avatar.compare(0, 2, "//") == 0) out.channel_avatar = "https:" + out.channel_avatar;
+    if (const json* lb = find_key(r, "likeButtonViewModel")) {
+        if (const json* def = find_key(*lb, "defaultButtonViewModel")) {
+            if (const json* vm = find_key(*def, "buttonViewModel"))
+                out.like_count = trimmed(vm->value("title", ""));
+        }
+        if (out.like_count.empty()) {
+            if (const json* ent = find_key(*lb, "likeCountEntity")) {
+                if (const json* txt = find_key(*ent, "likeCountIfIndifferent"))
+                    out.like_count = text_of(*txt);
+            }
+        }
+    } else if (const json* seg = find_key(r, "segmentedLikeDislikeButtonRenderer")) {
+        if (const json* lb = find_key(*seg, "likeButton"))
+            out.like_count = text_of(lb->value("toggleButtonRenderer", json::object()).value("defaultText", json::object()));
+    }
+    if (out.like_count.find_first_of("0123456789") == std::string::npos) out.like_count.clear();
 
     // The account's state: only the TV "next" answer (with the Bearer token) knows it.
     if (!access_token.empty()) {

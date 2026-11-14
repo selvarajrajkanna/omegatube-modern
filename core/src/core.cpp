@@ -424,6 +424,7 @@ char* omega_yt_details(const char* video_id) {
                       {"subscribers", d.subscribers},
                       {"date", d.date},
                       {"likeStatus", d.like_status},
+                      {"likeCount", d.like_count},
                       {"subscribed", d.subscribed}});
 }
 

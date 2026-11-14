@@ -95,6 +95,7 @@ struct VideoDetails {
     std::string channel_id, channel, channel_avatar, subscribers;  // subscribers: display text ("1,2 M d'abonnés")
     std::string date;           // display text ("12 mars 2023")
     std::string like_status;    // "LIKE" | "DISLIKE" | "INDIFFERENT" | "" (signed out / unknown)
+    std::string like_count;     // display count ("12K", "1,2 M"), empty when hidden/unavailable
     int subscribed = -1;        // 1 / 0, -1 unknown
 };
 
