@@ -45,7 +45,7 @@ namespace OmegaTube.Ui
             public TextLabel Label;
             public bool Active;      // subscribed / liked / disliked
         }
-        private enum Action { Restart, Rewind, PlayPause, Forward, Next, Skip, Captions, Audio, Speed, Quality, Loop, Stats }
+        private enum Action { Restart, PlayPause, Next, Skip, Captions, Audio, Speed, Quality, Loop, Stats }
 
         private class Button
         {
@@ -65,14 +65,16 @@ namespace OmegaTube.Ui
 
         private static readonly double[] Speeds = { 0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0 };
         private static readonly int[] DefaultHeights = { 2160, 1440, 1080, 720, 480, 360 };  // until the core answers
+        private static readonly Color M3Surface = new Color(0.13f, 0.13f, 0.16f, 0.82f);
+        private static readonly Color M3TitleSurface = new Color(0.08f, 0.08f, 0.10f, 0.72f);
         private const int ProgressWidth = 1760, ProgressX = 80;
-        private const int TitleY = 724, MetaY = 772, ActionsY = 810, ChipH = 44;
-        private const int TrackY = 874, ButtonsY = 928, ButtonSize = 56;
+        private const int TitleY = 808, MetaY = 846, ActionsY = 876, ChipH = 36;
+        private const int TrackY = 928, ButtonsY = 970, ButtonSize = 46;
         private const int SuggestionsY = 1080 + 30;   // the suggestions row, below the screen until revealed
         private const int ChromeLift = 30 + Theme.RowHeight + 40;   // how far the block slides up to show it whole
         private int SectionY => SuggestionsY + (InList ? 2 : 1) * Theme.RowHeight;  // description + comments, below the rows
         private const int SectionScreenY = 90;                       // where its top shows when it has the focus
-        private const int CaptionBottomFree = 1010, CaptionBottomChrome = 700;
+        private const int CaptionBottomFree = 1010, CaptionBottomChrome = 780;
         private const int UpNextSeconds = 10;
 
         private readonly VideoItem item;
@@ -206,19 +208,19 @@ namespace OmegaTube.Ui
             Root.Add(chrome);
             // Light gradients (top for the clock, bottom for the controls) instead of opaque bands; below the
             // screen, under the suggestions row, the bottom one's darkest shade continues.
-            chrome.Add(new ImageView { ResourceUrl = Theme.Image("scrim_top"), Size = new Size(1920, 200) });
-            chrome.Add(new ImageView { ResourceUrl = Theme.Image("scrim_bottom"), Size = new Size(1920, 400), Position = new Position(0, 680) });
+            chrome.Add(new ImageView { ResourceUrl = Theme.Image("scrim_top"), Size = new Size(1920, 120) });
+            chrome.Add(new ImageView { ResourceUrl = Theme.Image("scrim_bottom"), Size = new Size(1920, 300), Position = new Position(0, 780) });
             var under = Widgets.Box(new Color(0, 0, 0, 0.8f), 1920, ChromeLift + extraRowsHeight);
             under.PositionY = 1080;
             chrome.Add(under);
 
-            titleLabel = Widgets.Label("", Theme.TitleSize - 6, Theme.Text, ProgressWidth, 40);
-            titleLabel.BackgroundColor = new Color(0f, 0f, 0f, 0.55f);
-            Widgets.Round(titleLabel, 8);
+            titleLabel = Widgets.Label("", Theme.BodySize + 2, Theme.Text, ProgressWidth, 34);
+            titleLabel.BackgroundColor = M3TitleSurface;
+            Widgets.Round(titleLabel, 10);
             titleLabel.Position = new Position(ProgressX, TitleY);
             SetTitle(item.Title);
             chrome.Add(titleLabel);
-            metaLabel = Widgets.Label(MetaLine(), Theme.SmallSize + 1, new Color(0.85f, 0.85f, 0.85f, 1f), 1600, 30);
+            metaLabel = Widgets.Label(MetaLine(), Theme.SmallSize - 1, new Color(0.85f, 0.85f, 0.88f, 1f), 1600, 24);
             metaLabel.Position = new Position(ProgressX, MetaY);
             chrome.Add(metaLabel);
             signedIn = YouTube.SignedIn();
@@ -237,32 +239,33 @@ namespace OmegaTube.Ui
             };
             section.SetDescription(MetaLine(), "");
             chrome.Add(section);
-            clockLabel = Widgets.Label("", Theme.TitleSize, Theme.Text, 200);
-            clockLabel.Position = new Position(1640, 44);
-            clockLabel.HorizontalAlignment = HorizontalAlignment.End;
+            clockLabel = Widgets.Label("", Theme.SmallSize + 2, Theme.Text, 104, 38);
+            clockLabel.BackgroundColor = M3Surface;
+            Widgets.Round(clockLabel, 19);
+            clockLabel.Position = new Position(1776, 28);
+            clockLabel.HorizontalAlignment = HorizontalAlignment.Center;
+            clockLabel.VerticalAlignment = VerticalAlignment.Center;
             chrome.Add(clockLabel);
 
-            track = Widgets.Rounded(new Color(1, 1, 1, 0.3f), ProgressWidth, 6, 3);
+            track = Widgets.Rounded(new Color(1, 1, 1, 0.28f), ProgressWidth, 4, 2);
             track.Position = new Position(ProgressX, TrackY);
             chrome.Add(track);
-            progressFill = Widgets.Rounded(Theme.Accent, 0, 6, 3);
+            progressFill = Widgets.Rounded(Theme.Accent, 0, 4, 2);
             track.Add(progressFill);
-            playhead = Widgets.Rounded(Theme.Accent, 18, 18, 9);
-            playhead.Position = new Position(ProgressX - 9, TrackY - 6);
+            playhead = Widgets.Rounded(Theme.Accent, 14, 14, 7);
+            playhead.Position = new Position(ProgressX - 7, TrackY - 5);
             chrome.Add(playhead);
-            timeLabel = Widgets.Label("", Theme.SmallSize, Theme.Text, 400);
-            timeLabel.Position = new Position(ProgressX, TrackY + 14);
+            timeLabel = Widgets.Label("", Theme.SmallSize - 1, Theme.Text, 400);
+            timeLabel.Position = new Position(ProgressX, TrackY + 10);
             chrome.Add(timeLabel);
-            durationLabel = Widgets.Label("", Theme.SmallSize, Theme.Text, 300);
-            durationLabel.Position = new Position(ProgressX + ProgressWidth - 300, TrackY + 14);
+            durationLabel = Widgets.Label("", Theme.SmallSize - 1, Theme.Text, 300);
+            durationLabel.Position = new Position(ProgressX + ProgressWidth - 300, TrackY + 10);
             durationLabel.HorizontalAlignment = HorizontalAlignment.End;
             chrome.Add(durationLabel);
 
             int x = ProgressX;
             AddButton(Action.Restart, "restart", ref x);
-            AddButton(Action.Rewind, "fast_rewind", ref x);
             playButton = AddButton(Action.PlayPause, "pause", ref x);
-            AddButton(Action.Forward, "fast_forward", ref x);
             AddButton(Action.Next, "skip_next", ref x);
             // Right group, right to left.
             AddRightButton(Action.Stats, "stats");
@@ -274,9 +277,9 @@ namespace OmegaTube.Ui
             skipButton = AddSkipButton();
             LayoutRightButtons();
 
-            tooltip = Widgets.Label("", Theme.SmallSize + 1, Theme.CardTextFocused);
+            tooltip = Widgets.Label("", Theme.SmallSize - 1, Theme.CardTextFocused);
             tooltip.BackgroundColor = Theme.CardInfoFocused;
-            Widgets.Round(tooltip, 8);
+            Widgets.Round(tooltip, 10);
             tooltip.ParentOrigin = Tizen.NUI.ParentOrigin.TopLeft;
             tooltip.PivotPoint = Tizen.NUI.PivotPoint.TopCenter;
             tooltip.PositionUsesPivotPoint = true;
@@ -286,21 +289,21 @@ namespace OmegaTube.Ui
             panel = new ListPanel();
             Root.Add(panel);
 
-            statsLabel = Widgets.Label("", Theme.SmallSize - 3, Theme.Text, 580, 140);
+            statsLabel = Widgets.Label("", Theme.SmallSize - 3, Theme.Text, 520, 120);
             statsLabel.MultiLine = true;
-            statsLabel.BackgroundColor = Theme.Scrim;
-            Widgets.Round(statsLabel, 8);
-            statsLabel.Position = new Position(40, 32);
+            statsLabel.BackgroundColor = M3TitleSurface;
+            Widgets.Round(statsLabel, 14);
+            statsLabel.Position = new Position(36, 28);
             Widgets.SetVisible(statsLabel, app.Config.Player.ShowStats);
             Root.Add(statsLabel);
 
-            toast = Widgets.Label("", Theme.TitleSize - 2, Theme.Text, 0, 0);
-            toast.BackgroundColor = new Color(0.09f, 0.09f, 0.09f, 0.9f);
-            Widgets.Round(toast, 12);
+            toast = Widgets.Label("", Theme.BodySize - 2, Theme.Text, 0, 0);
+            toast.BackgroundColor = new Color(0.13f, 0.13f, 0.16f, 0.92f);
+            Widgets.Round(toast, 20);
             toast.ParentOrigin = Tizen.NUI.ParentOrigin.TopLeft;
             toast.PivotPoint = Tizen.NUI.PivotPoint.TopCenter;
             toast.PositionUsesPivotPoint = true;
-            toast.Position = new Position(960, 70);
+            toast.Position = new Position(960, 32);
             toast.Hide();
             Root.Add(toast);
         }
@@ -308,7 +311,7 @@ namespace OmegaTube.Ui
         private Button AddButton(Action action, string icon, ref int x)
         {
             var b = MakeButton(action, icon, x);
-            x += 74;
+            x += 58;
             return b;
         }
 
@@ -322,14 +325,14 @@ namespace OmegaTube.Ui
         private Button MakeButton(Action action, string icon, int x)
         {
             var view = new View { Position = new Position(x, ButtonsY), Size = new Size(ButtonSize, ButtonSize),
-                                  BackgroundColor = Theme.GlassButton, PivotPoint = Tizen.NUI.PivotPoint.Center,
+                                  BackgroundColor = M3Surface, PivotPoint = Tizen.NUI.PivotPoint.Center,
                                   PositionUsesPivotPoint = false };
             Widgets.Round(view, ButtonSize / 2);
-            var img = new ImageView { ResourceUrl = Theme.Icon(icon), Size = new Size(32, 32), Position = new Position(12, 12) };
+            var img = new ImageView { ResourceUrl = Theme.Icon(icon), Size = new Size(26, 26), Position = new Position(10, 10) };
             view.Add(img);
             chrome.Add(view);
-            var indicator = Widgets.Rounded(Theme.Accent, 22, 4, 2f);
-            indicator.Position = new Position(x + (ButtonSize - 22) / 2, ButtonsY + ButtonSize + 6);
+            var indicator = Widgets.Rounded(Theme.Accent, 16, 3, 1.5f);
+            indicator.Position = new Position(x + (ButtonSize - 16) / 2, ButtonsY + ButtonSize + 5);
             indicator.Hide();
             chrome.Add(indicator);
             var b = new Button { Action = action, View = view, Icon = img, Indicator = indicator };
@@ -340,15 +343,15 @@ namespace OmegaTube.Ui
         // "Skip <segment>" pill, only present while a manual SponsorBlock segment is offered.
         private Button AddSkipButton()
         {
-            var view = new View { Position = new Position(0, ButtonsY), Size = new Size(260, ButtonSize),
-                                  BackgroundColor = Theme.GlassButton, PivotPoint = Tizen.NUI.PivotPoint.Center,
+            var view = new View { Position = new Position(0, ButtonsY), Size = new Size(220, ButtonSize),
+                                  BackgroundColor = M3Surface, PivotPoint = Tizen.NUI.PivotPoint.Center,
                                   PositionUsesPivotPoint = false };
             Widgets.Round(view, ButtonSize / 2);
-            var img = new ImageView { ResourceUrl = Theme.Icon("skip_segment"), Size = new Size(30, 30), Position = new Position(16, 13) };
+            var img = new ImageView { ResourceUrl = Theme.Icon("skip_segment"), Size = new Size(24, 24), Position = new Position(14, 11) };
             view.Add(img);
-            var label = Widgets.Label(T("Skip"), Theme.SmallSize + 1, Theme.Text, 190, ButtonSize);
+            var label = Widgets.Label(T("Skip"), Theme.SmallSize - 1, Theme.Text, 162, ButtonSize);
             label.VerticalAlignment = VerticalAlignment.Center;
-            label.Position = new Position(56, 0);
+            label.Position = new Position(46, 0);
             view.Add(label);
             chrome.Add(view);
             var b = new Button { Action = Action.Skip, View = view, Icon = img, Label = label, Available = false };
@@ -373,9 +376,9 @@ namespace OmegaTube.Ui
                 b.View.PositionX = right;
                 if (b.Indicator != null)
                 {
-                    b.Indicator.PositionX = right + (b.View.SizeWidth - 22) / 2;
+                    b.Indicator.PositionX = right + (b.View.SizeWidth - 16) / 2;
                 }
-                right -= 14;
+                right -= 10;
             }
             UpdateIndicators();
         }
@@ -595,30 +598,30 @@ namespace OmegaTube.Ui
         {
             title = title ?? "";
             titleLabel.Text = "  " + title + "  ";
-            titleLabel.SizeWidth = Math.Min(ProgressWidth, Math.Max(120, (int)(title.Length * (Theme.TitleSize - 6) * 0.56f) + 44));
+            titleLabel.SizeWidth = Math.Min(ProgressWidth, Math.Max(100, (int)(title.Length * (Theme.BodySize + 2) * 0.54f) + 36));
         }
 
         private Chip AddChip(Social kind, string icon, string text)
         {
-            var view = new View { Size = new Size(160, ChipH), Position = new Position(0, ActionsY),
+            var view = new View { Size = new Size(140, ChipH), Position = new Position(0, ActionsY),
                                   PivotPoint = Tizen.NUI.PivotPoint.Center, PositionUsesPivotPoint = false };
             Widgets.Round(view, ChipH / 2f);
             ImageView image = null;
             if (kind == Social.Channel)
             {
-                image = Widgets.Round(new ImageView { Size = new Size(30, 30), Position = new Position(7, 7), BackgroundColor = Theme.SurfaceHigh }, 15);
+                image = Widgets.Round(new ImageView { Size = new Size(24, 24), Position = new Position(6, 6), BackgroundColor = Theme.SurfaceHigh }, 12);
             }
             else if (icon != null)
             {
-                image = new ImageView { ResourceUrl = Theme.Icon(icon), Size = new Size(24, 24), Position = new Position(14, 10) };
+                image = new ImageView { ResourceUrl = Theme.Icon(icon), Size = new Size(20, 20), Position = new Position(12, 8) };
             }
             if (image != null)
             {
                 view.Add(image);
             }
-            var label = Widgets.Label(text, Theme.SmallSize + 1, Theme.Text, 440, ChipH);
+            var label = Widgets.Label(text, Theme.SmallSize - 1, Theme.Text, 380, ChipH);
             label.VerticalAlignment = VerticalAlignment.Center;
-            label.Position = new Position(image != null ? (kind == Social.Channel ? 46 : 44) : 20, 0);
+            label.Position = new Position(image != null ? (kind == Social.Channel ? 36 : 38) : 16, 0);
             view.Add(label);
             chrome.Add(view);
             var chip = new Chip { Kind = kind, View = view, Image = image, Label = label };
@@ -637,12 +640,12 @@ namespace OmegaTube.Ui
                     continue;
                 }
                 string text = c.Label.Text ?? "";
-                int width = (int)c.Label.PositionX + Math.Max(32, (int)(text.Length * (Theme.SmallSize + 1) * 0.53f)) + 20;
-                width = Math.Min(c.Kind == Social.Channel ? 440 : 280, width);
+                int width = (int)c.Label.PositionX + Math.Max(28, (int)(text.Length * (Theme.SmallSize - 1) * 0.53f)) + 16;
+                width = Math.Min(c.Kind == Social.Channel ? 380 : 240, width);
                 c.View.SizeWidth = width;
-                c.Label.SizeWidth = width - c.Label.PositionX - 16;
+                c.Label.SizeWidth = width - c.Label.PositionX - 12;
                 c.View.PositionX = x;
-                x += width + 12;
+                x += width + 10;
             }
             RefreshChips();
         }
@@ -653,9 +656,9 @@ namespace OmegaTube.Ui
             {
                 Chip c = chips[i];
                 bool f = focus == Focus.Actions && i == chipIndex;
-                // Unfocused: glass pills, red "S'abonner" as on YouTube; liked / disliked thumbs turn red.
+                // Unfocused: Material 3 tonal pills, red "Subscribe" as on YouTube; liked thumbs turn red.
                 c.View.BackgroundColor = f ? Theme.CardInfoFocused
-                                       : c.Kind == Social.Subscribe && !c.Active ? Theme.Accent : Theme.GlassButton;
+                                       : c.Kind == Social.Subscribe && !c.Active ? Theme.Accent : M3Surface;
                 c.Label.TextColor = f ? Theme.CardTextFocused : Theme.Text;
                 if (c.Image != null && c.Kind != Social.Channel)
                 {
@@ -1147,7 +1150,7 @@ namespace OmegaTube.Ui
             if (live)
             {
                 progressFill.SizeWidth = ProgressWidth;
-                playhead.PositionX = ProgressX + ProgressWidth - 9;
+                playhead.PositionX = ProgressX + ProgressWidth - 7;
                 timeLabel.Text = "● EN DIRECT";
                 durationLabel.Text = "";
                 return;
@@ -1156,7 +1159,7 @@ namespace OmegaTube.Ui
             long dur = Math.Max(stats.DurationMs, 1);
             float fill = (float)(ProgressWidth * Math.Min(1.0, pos / (double)dur));
             progressFill.SizeWidth = fill;
-            playhead.PositionX = ProgressX + fill - 9;
+            playhead.PositionX = ProgressX + fill - 7;
             timeLabel.Text = pendingSeekMs >= 0 ? $"{Format(pos)}   ({SignedSeconds(pendingSeekMs - stats.PositionMs)})" : Format(pos);
             durationLabel.Text = Format(stats.DurationMs);
             if (focus == Focus.Buttons)
@@ -1443,7 +1446,7 @@ namespace OmegaTube.Ui
                 SponsorCategory cat = SponsorCategory.Find(s.Category);
                 float x = (float)(ProgressWidth * s.StartMs / (double)stats.DurationMs);
                 float w = Math.Max(4f, (float)(ProgressWidth * (s.EndMs - s.StartMs) / (double)stats.DurationMs));
-                track.Add(new View { BackgroundColor = cat?.Color ?? Theme.Text, Position = new Position(x, 0), Size = new Size(w, 6) });
+                track.Add(new View { BackgroundColor = cat?.Color ?? Theme.Text, Position = new Position(x, 0), Size = new Size(w, 4) });
             }
             progressFill.RaiseToTop();
         }
@@ -1474,8 +1477,8 @@ namespace OmegaTube.Ui
             // Focused seek bar: bigger playhead and a thicker track.
             RefreshChips();
             bool onTimeline = focus == Focus.Timeline;
-            playhead.Scale = onTimeline ? new Vector3(1.6f, 1.6f, 1f) : Vector3.One;
-            track.SizeHeight = onTimeline ? 10 : 6;
+            playhead.Scale = onTimeline ? new Vector3(1.5f, 1.5f, 1f) : Vector3.One;
+            track.SizeHeight = onTimeline ? 8 : 4;
             progressFill.SizeHeight = track.SizeHeight;
             UpdateChrome(DateTime.Now);
         }
@@ -1497,8 +1500,8 @@ namespace OmegaTube.Ui
             for (int i = 0; i < buttons.Count; i++)
             {
                 bool f = focus == Focus.Buttons && i == buttonIndex;
-                buttons[i].View.BackgroundColor = f ? Theme.Accent : Theme.GlassButton;
-                buttons[i].View.Scale = f ? new Vector3(1.12f, 1.12f, 1f) : Vector3.One;
+                buttons[i].View.BackgroundColor = f ? Theme.Accent : M3Surface;
+                buttons[i].View.Scale = f ? new Vector3(1.10f, 1.10f, 1f) : Vector3.One;
             }
             UpdateTooltip();
         }
@@ -1527,13 +1530,10 @@ namespace OmegaTube.Ui
                 return;
             }
             Button b = buttons[buttonIndex];
-            string step = App.Config.Player.SeekStepSeconds + " s";
             string text = b.Action switch
             {
                 Action.Restart => T("Restart"),
-                Action.Rewind => T("Back {0}", step),
                 Action.PlayPause => stats.State == 4 || ended ? T("Play") : T("Pause"),
-                Action.Forward => T("Forward {0}", step),
                 Action.Next => InList ? T("Next in the list") : T("Next video"),
                 Action.Captions => T("Subtitles: {0}", captions != null ? CaptionName(captions) : T("off")),
                 Action.Audio => T("Audio track: {0}", AudioName(info.AudioTrack)),
@@ -1547,10 +1547,10 @@ namespace OmegaTube.Ui
             {
                 tooltip.Text = "  " + text + "  ";
             }
-            // Centred above the button, kept on screen.
+            // Centred below the button, kept on screen.
             float center = b.View.PositionX + b.View.SizeWidth / 2;
-            float half = Math.Min(400, text.Length * 6.5f + 30);
-            tooltip.Position = new Position(Math.Max(ProgressX + half, Math.Min(ProgressX + ProgressWidth - half, center)), ButtonsY + ButtonSize + 14);
+            float half = Math.Min(400, text.Length * 6.0f + 26);
+            tooltip.Position = new Position(Math.Max(ProgressX + half, Math.Min(ProgressX + ProgressWidth - half, center)), ButtonsY + ButtonSize + 10);
             tooltip.Show();
         }
 
@@ -1837,12 +1837,6 @@ namespace OmegaTube.Ui
                     {
                         Seek(0);
                     }
-                    break;
-                case Action.Rewind:
-                    SeekBy(-1);
-                    break;
-                case Action.Forward:
-                    SeekBy(1);
                     break;
                 case Action.PlayPause:
                     if (ended)
