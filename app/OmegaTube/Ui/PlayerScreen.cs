@@ -2018,10 +2018,24 @@ namespace OmegaTube.Ui
                 seekStartAt = now;
                 seekDirection = direction;
             }
-            // Logarithmic ramp: accelerates fast early, tapers off up to 7x at 10s.
-            double t = Math.Min(1.0, Math.Max(0.0, (now - seekStartAt).TotalSeconds / 10.0));
-            double multiplier = 1.0 + 6.0 * Math.Log10(1.0 + 9.0 * t);
-            long step = (long)Math.Round(App.Config.Player.SeekStepSeconds * 1000.0 * multiplier) * direction;
+            // YouTube TV style: keep 1x for taps / first 0.5s, then step up 2x -> 4x -> 8x
+            // while capping max step to ~2% of video duration so short videos don't overshoot.
+            long baseStep = App.Config.Player.SeekStepSeconds * 1000L;
+            double elapsed = (now - seekStartAt).TotalSeconds;
+            long step;
+            if (elapsed < 0.5)
+            {
+                step = baseStep;
+            }
+            else
+            {
+                int tier = elapsed < 2.0 ? 2 : elapsed < 4.0 ? 4 : 8;
+                long maxStep = stats.DurationMs > 0
+                    ? Math.Max(baseStep, Math.Min(baseStep * 8L, stats.DurationMs / 50))
+                    : baseStep * 8L;
+                step = Math.Min(baseStep * tier, maxStep);
+            }
+            step *= direction;
             long basePos = pendingSeekMs >= 0 ? pendingSeekMs : stats.PositionMs;
             pendingSeekMs = Math.Max(0, Math.Min(basePos + step, Math.Max(0, stats.DurationMs - 1000)));
             pendingSeekAt = now;

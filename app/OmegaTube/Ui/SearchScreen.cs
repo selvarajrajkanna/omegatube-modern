@@ -45,9 +45,10 @@ namespace OmegaTube.Ui
         private const int KeyW = 86, KeyH = 72, KeyGap = 8;
         private const int KbX = 80, KbY = 190;
 
-        private enum Zone { Keyboard, Suggestions, AddButton, Results }
+        private enum Zone { Input, Keyboard, Suggestions, AddButton, Results }
 
-        private readonly TextLabel queryLabel;
+        private readonly View inputBox;
+        private readonly TextField queryField;
         private readonly TextLabel addButton;
         private readonly List<List<TextLabel>> keyLabels = new List<List<TextLabel>>();
         private readonly List<TextLabel> suggestionLabels = new List<TextLabel>();
@@ -55,6 +56,7 @@ namespace OmegaTube.Ui
         private List<string> suggestions = new List<string>();
         private FeedRow results;
         private string query = "";
+        private bool syncingField;
         private Zone zone = Zone.Keyboard;
         private int keyRow = 1, keyCol;
         private int suggestionIndex;
@@ -67,13 +69,31 @@ namespace OmegaTube.Ui
         {
             Root.BackgroundColor = Theme.Background;
 
-            var box = Widgets.Box(Theme.Surface, 900, 80);
-            box.Position = new Position(KbX, 70);
-            Root.Add(box);
-            queryLabel = Widgets.Label("", Theme.TitleSize, Theme.Text, 860, 80);
-            queryLabel.Position = new Position(20, 0);
-            queryLabel.VerticalAlignment = VerticalAlignment.Center;
-            box.Add(queryLabel);
+            inputBox = Widgets.Box(Theme.Surface, 900, 80);
+            inputBox.Position = new Position(KbX, 70);
+            Root.Add(inputBox);
+            queryField = new TextField
+            {
+                Size = new Size(860, 80),
+                Position = new Position(20, 0),
+                PixelSize = Theme.TitleSize,
+                TextColor = Theme.Text,
+                PlaceholderText = T("Search YouTube…"),
+                PlaceholderTextColor = Theme.TextDim,
+                VerticalAlignment = VerticalAlignment.Center,
+                Focusable = true,
+                EnableSelection = false,
+            };
+            queryField.TextChanged += (s, e) =>
+            {
+                if (syncingField)
+                {
+                    return;
+                }
+                query = queryField.Text ?? "";
+                UiGuard.Fire("SearchScreen.RefreshSuggestions", RefreshSuggestions);
+            };
+            inputBox.Add(queryField);
 
             addButton = Widgets.Label("  + " + T("Add to menu") + "  ", Theme.BodySize, Theme.Text, 0, 0);
             addButton.Position = new Position(KbX + 930, 86);
@@ -141,10 +161,29 @@ namespace OmegaTube.Ui
 
         private int SuggestionCount => System.Math.Min(suggestions.Count, suggestionLabels.Count);
 
+        private void SyncField()
+        {
+            if ((queryField.Text ?? "") == query)
+            {
+                return;
+            }
+            syncingField = true;
+            queryField.Text = query;
+            syncingField = false;
+        }
+
         private void UpdateFocus()
         {
-            queryLabel.Text = query.Length > 0 ? query + "_" : T("Search YouTube…");
-            queryLabel.TextColor = query.Length > 0 ? Theme.Text : Theme.TextDim;
+            SyncField();
+            inputBox.BackgroundColor = zone == Zone.Input ? Theme.SurfaceFocused : Theme.Surface;
+            if (zone == Zone.Input)
+            {
+                FocusManager.Instance.SetCurrentFocusView(queryField);
+            }
+            else if (FocusManager.Instance.GetCurrentFocusView() == queryField)
+            {
+                FocusManager.Instance.ClearFocus();
+            }
             for (int r = 0; r < keyLabels.Count; r++)
             {
                 for (int c = 0; c < keyLabels[r].Count; c++)
@@ -163,10 +202,55 @@ namespace OmegaTube.Ui
             results?.SetFocused(zone == Zone.Results);
         }
 
+        public override void OnHide()
+        {
+            if (FocusManager.Instance.GetCurrentFocusView() == queryField)
+            {
+                FocusManager.Instance.ClearFocus();
+            }
+        }
+
         public override bool OnKey(string key)
         {
             switch (zone)
             {
+                case Zone.Input:
+                    if (key == "Down")
+                    {
+                        zone = Zone.Keyboard;
+                        keyRow = 0;
+                    }
+                    else if (key == "Right")
+                    {
+                        if (addButton.Visibility)
+                        {
+                            zone = Zone.AddButton;
+                        }
+                        else if (SuggestionCount > 0)
+                        {
+                            zone = Zone.Suggestions;
+                            suggestionIndex = 0;
+                        }
+                    }
+                    else if (key == "Left" || key == "XF86Back" || key == "Escape")
+                    {
+                        zone = Zone.Keyboard;
+                        UpdateFocus();
+                        return false;
+                    }
+                    else if (key == "Return")
+                    {
+                        if (query.Trim().Length > 0)
+                        {
+                            RunSearch();
+                        }
+                        else
+                        {
+                            FocusManager.Instance.ClearFocus();
+                            FocusManager.Instance.SetCurrentFocusView(queryField);
+                        }
+                    }
+                    break;
                 case Zone.Keyboard:
                     if (!KeyboardKey(key))
                     {
@@ -205,6 +289,10 @@ namespace OmegaTube.Ui
                     {
                         zone = Zone.Keyboard;
                     }
+                    else if (key == "Left")
+                    {
+                        zone = Zone.Input;
+                    }
                     else if (key == "Return")
                     {
                         AddToHome();
@@ -241,10 +329,7 @@ namespace OmegaTube.Ui
                 case "Up":
                     if (keyRow == 0)
                     {
-                        if (results != null)
-                        {
-                            zone = Zone.AddButton;
-                        }
+                        zone = Zone.Input;
                     }
                     else
                     {
