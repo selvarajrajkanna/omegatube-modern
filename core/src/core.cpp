@@ -281,10 +281,6 @@ int omega_player_seek(omega_player* p, int64_t position_ms) { return p && p->imp
 
 int omega_player_set_rate(omega_player* p, double rate) { return p && p->impl.set_rate(rate) ? 0 : -1; }
 
-int omega_player_set_display_rect(omega_player* p, int x, int y, int w, int h) {
-    return p && p->impl.set_display_rect(x, y, w, h) ? 0 : -1;
-}
-
 void omega_player_get_stats(omega_player* p, omega_player_stats* out) {
     if (!p || !out) return;
     omega::PlayerStats s = p->impl.stats();

@@ -67,7 +67,6 @@ public:
     // Jumps to the keyframe segment at or before `ms`. Returns false if not seekable (yet).
     bool seek(int64_t ms);
     bool set_rate(double rate);
-    bool set_display_rect(int x, int y, int w, int h);
     PlayerStats stats();
     const std::string& error() const { return error_; }
     // start() failed because YouTube kept refusing a stream (403/410), not a network or codec issue.

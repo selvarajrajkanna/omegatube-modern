@@ -563,13 +563,6 @@ bool Player::set_rate(double rate) {
     return rc == 0;
 }
 
-bool Player::set_display_rect(int x, int y, int w, int h) {
-    if (!handle_ || !api_ || !cfg_.use_display) return false;
-    int rc = api_->set_ecore_display(handle_, esp::DISPLAY_OVERLAY, cfg_.window, x, y, w, h);
-    OLOG("esp set_ecore_display(%p, %d,%d %dx%d) -> %d", cfg_.window, x, y, w, h, rc);
-    return rc == 0;
-}
-
 PlayerStats Player::stats() {
     PlayerStats s{};
     s.state = handle_ ? api_->get_state(handle_) : esp::STATE_NONE;

@@ -457,10 +457,6 @@ namespace OmegaTube.Ui
                 SetTitle(info.Title);   // the card showed the list's name
             }
             SetMeta(MetaLine());
-            if (focus == Focus.Comments)
-            {
-                NativeCore.PlayerSetDisplayRect(player, 0, 0, 1920 - CommentsPanel.PanelWidth, 1080);
-            }
             if (details != null && details.ChannelId.Length == 0 && info.ChannelId.Length > 0)
             {
                 details.ChannelId = info.ChannelId;   // the details answered first, without it
@@ -733,10 +729,6 @@ namespace OmegaTube.Ui
                 d.ChannelId = info.ChannelId ?? "";   // videoDetails.channelId from the player answer
             }
             SetMeta(MetaLine());
-            if (focus == Focus.Comments)
-            {
-                NativeCore.PlayerSetDisplayRect(player, 0, 0, 1920 - CommentsPanel.PanelWidth, 1080);
-            }
             Chip channel = ChipOf(Social.Channel);
             if (d.Channel.Length > 0)
             {
@@ -2284,7 +2276,6 @@ namespace OmegaTube.Ui
             HideChrome();
             focus = Focus.Comments;
             commentsPanel.Open();
-            SetVideoViewport(0, 0, 1920 - CommentsPanel.PanelWidth, 1080);
         }
 
         private void OpenDescriptionSplit()
@@ -2293,41 +2284,16 @@ namespace OmegaTube.Ui
             focus = Focus.Comments;
             string title = item.IsList && info.Title.Length > 0 ? info.Title : item.Title;
             commentsPanel.OpenDescription(title, MetaLine(), info.Description);
-            SetVideoViewport(0, 0, 1920 - CommentsPanel.PanelWidth, 1080);
         }
 
         private void CloseCommentsSplit()
         {
             commentsPanel.ClosePanel();
-            SetVideoViewport(0, 0, 1920, 1080);
             focus = Focus.Hidden;
-        }
-
-        private void SetVideoViewport(int vx, int vy, int vw, int vh)
-        {
-            IntPtr p = player;
-            if (p != IntPtr.Zero)
-            {
-                Task.Run(() => NativeCore.PlayerSetDisplayRect(p, vx, vy, vw, vh));
-            }
-            captionLabel.PositionX = vx + vw / 2f;
-            LayoutBars(vx, vy, vw, vh);
         }
 
         // The video plane is letterboxed and leaves the uncovered area empty: cover it in black.
         private void LayoutBars()
-        {
-            if (focus == Focus.Comments)
-            {
-                LayoutBars(0, 0, 1920 - CommentsPanel.PanelWidth, 1080);
-            }
-            else
-            {
-                LayoutBars(0, 0, 1920, 1080);
-            }
-        }
-
-        private void LayoutBars(int vx, int vy, int vw, int vh)
         {
             barA.Hide();
             barB.Hide();
@@ -2337,26 +2303,25 @@ namespace OmegaTube.Ui
                 return;
             }
             double aspect = playing.Width / (double)playing.Height;
-            double containerAspect = vw / (double)vh;
-            if (Math.Abs(aspect - containerAspect) < 0.01)
+            if (Math.Abs(aspect - 16.0 / 9.0) < 0.01)
             {
                 return;
             }
-            if (aspect < containerAspect)
+            if (aspect < 16.0 / 9.0)
             {
-                int side = (int)Math.Ceiling((vw - vh * aspect) / 2);   // pillarbox: left / right
-                barA.Size = new Size(side, vh);
-                barA.Position = new Position(vx, vy);
-                barB.Size = new Size(side, vh);
-                barB.Position = new Position(vx + vw - side, vy);
+                int side = (int)Math.Ceiling((1920 - 1080 * aspect) / 2);   // pillarbox: left / right
+                barA.Size = new Size(side, 1080);
+                barA.Position = new Position(0, 0);
+                barB.Size = new Size(side, 1080);
+                barB.Position = new Position(1920 - side, 0);
             }
             else
             {
-                int band = (int)Math.Ceiling((vh - vw / aspect) / 2);   // letterbox: top / bottom
-                barA.Size = new Size(vw, band);
-                barA.Position = new Position(vx, vy);
-                barB.Size = new Size(vw, band);
-                barB.Position = new Position(vx, vy + vh - band);
+                int band = (int)Math.Ceiling((1080 - 1920 / aspect) / 2);   // letterbox: top / bottom
+                barA.Size = new Size(1920, band);
+                barA.Position = new Position(0, 0);
+                barB.Size = new Size(1920, band);
+                barB.Position = new Position(0, 1080 - band);
             }
             barA.Show();
             barB.Show();
