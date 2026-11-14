@@ -8,6 +8,7 @@
 #include <mutex>
 #include <stdexcept>
 #include <string>
+#include <thread>
 
 #include <nlohmann/json.hpp>
 #include <qrcodegen/qrcodegen.hpp>
@@ -558,6 +559,7 @@ void omega_init(const char* data_dir) {
     omega::cfg::init(dir + "remote-config.json");
     omega::yt::shared_auth().init(dir + "accounts.json");  // migrates a legacy auth.json
     if (!dir.empty()) omega::yt::shared_decipher().set_cache_dir(dir.substr(0, dir.size() - 1));
+    std::thread([] { omega::net::warmup(); }).detach();
 }
 
 char* omega_config_refresh(void) {

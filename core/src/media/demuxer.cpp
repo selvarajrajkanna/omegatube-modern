@@ -1,5 +1,7 @@
 #include "media/demuxer.h"
 
+#include <algorithm>
+#include <array>
 #include <cstring>
 
 #include "media/mp4.h"
@@ -19,13 +21,13 @@ const char* codec_name(Codec c) {
 
 std::unique_ptr<Demuxer> open_demuxer(Demuxer::ReadFn read) {
     // Peek at the first 4 bytes (EBML magic vs an MP4 box size), then replay them to the reader.
-    auto head = std::make_shared<std::vector<uint8_t>>(4);
-    head->resize(read(head->data(), head->size()));
-    bool webm = head->size() == 4 && (*head)[0] == 0x1A && (*head)[1] == 0x45 && (*head)[2] == 0xDF &&
-                (*head)[3] == 0xA3;
-    auto replay = [head, pos = size_t(0), read = std::move(read)](void* dst, size_t n) mutable {
-        size_t from_head = std::min(n, head->size() - pos);
-        memcpy(dst, head->data() + pos, from_head);
+    std::array<uint8_t, 4> head{};
+    size_t len = read(head.data(), head.size());
+    bool webm = len == 4 && head[0] == 0x1A && head[1] == 0x45 && head[2] == 0xDF && head[3] == 0xA3;
+    auto replay = [head, len, pos = size_t(0), read = std::move(read)](void* dst, size_t n) mutable {
+        if (pos >= len) return read(dst, n);
+        size_t from_head = std::min(n, len - pos);
+        memcpy(dst, head.data() + pos, from_head);
         pos += from_head;
         return from_head == n ? n : from_head + read(static_cast<uint8_t*>(dst) + from_head, n - from_head);
     };

@@ -19,8 +19,10 @@
 #include <charconv>
 #include <chrono>
 #include <cstring>
+#include <memory>
 #include <mutex>
 #include <thread>
+#include <vector>
 
 #include "util/log.h"
 
@@ -88,7 +90,100 @@ TlsContext& tls() {
     return ctx;
 }
 
+struct CachedAddr {
+    sockaddr_storage addr{};
+    socklen_t len = 0;
+    int family = 0;
+    int socktype = 0;
+    int protocol = 0;
+};
+
+class DnsCache {
+public:
+    static constexpr auto kTtl = std::chrono::seconds(60);
+    static constexpr size_t kMaxEntries = 32;
+
+    std::vector<CachedAddr> lookup(const std::string& key) {
+        std::lock_guard lock(mu_);
+        auto now = std::chrono::steady_clock::now();
+        for (auto it = entries_.begin(); it != entries_.end(); ++it) {
+            if (it->key == key) {
+                if (now - it->ts < kTtl) return it->addrs;
+                entries_.erase(it);
+                break;
+            }
+        }
+        return {};
+    }
+
+    void put(const std::string& key, std::vector<CachedAddr> addrs) {
+        if (addrs.empty()) return;
+        std::lock_guard lock(mu_);
+        auto now = std::chrono::steady_clock::now();
+        for (auto& e : entries_) {
+            if (e.key == key) {
+                e.addrs = std::move(addrs);
+                e.ts = now;
+                return;
+            }
+        }
+        if (entries_.size() >= kMaxEntries) entries_.erase(entries_.begin());
+        entries_.push_back({key, std::move(addrs), now});
+    }
+
+    void invalidate(const std::string& key) {
+        std::lock_guard lock(mu_);
+        for (auto it = entries_.begin(); it != entries_.end(); ++it) {
+            if (it->key == key) {
+                entries_.erase(it);
+                break;
+            }
+        }
+    }
+
+private:
+    struct Entry {
+        std::string key;
+        std::vector<CachedAddr> addrs;
+        std::chrono::steady_clock::time_point ts;
+    };
+    std::mutex mu_;
+    std::vector<Entry> entries_;
+};
+
+DnsCache& dns_cache() {
+    static DnsCache cache;
+    return cache;
+}
+
+int open_and_connect(const CachedAddr& ca, const std::string& host, std::string& error) {
+    int fd = socket(ca.family, ca.socktype, ca.protocol);
+    if (fd < 0) {
+        error = std::string("socket ") + host + ": " + strerror(errno);
+        return -1;
+    }
+    timeval tv{15, 0};
+    setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+    setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv));
+    int rcvbuf = 2 * 1024 * 1024;
+    setsockopt(fd, SOL_SOCKET, SO_RCVBUF, &rcvbuf, sizeof(rcvbuf));
+    int one = 1;
+    setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &one, sizeof(one));
+    if (connect(fd, reinterpret_cast<const sockaddr*>(&ca.addr), ca.len) == 0) return fd;
+    error = std::string("connect ") + host + ": " + strerror(errno);
+    ::close(fd);
+    return -1;
+}
+
 int connect_tcp(const std::string& host, const std::string& port, std::string& error) {
+    std::string key = host + ":" + port;
+    auto cached = dns_cache().lookup(key);
+    for (const auto& ca : cached) {
+        int fd = open_and_connect(ca, host, error);
+        if (fd >= 0) return fd;
+    }
+    if (!cached.empty()) dns_cache().invalidate(key);
+
     addrinfo hints{};
     hints.ai_family = AF_UNSPEC;
     hints.ai_socktype = SOCK_STREAM;
@@ -97,24 +192,75 @@ int connect_tcp(const std::string& host, const std::string& port, std::string& e
         error = std::string("dns ") + host + ": " + gai_strerror(rc);
         return -1;
     }
+    std::vector<CachedAddr> addrs;
     int fd = -1;
     for (addrinfo* ai = res; ai; ai = ai->ai_next) {
-        fd = socket(ai->ai_family, ai->ai_socktype, ai->ai_protocol);
-        if (fd < 0) continue;
-        timeval tv{15, 0};
-        setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
-        setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv));
-        int rcvbuf = 2 * 1024 * 1024;
-        setsockopt(fd, SOL_SOCKET, SO_RCVBUF, &rcvbuf, sizeof(rcvbuf));
-        int one = 1;
-        setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &one, sizeof(one));
-        if (connect(fd, ai->ai_addr, ai->ai_addrlen) == 0) break;
-        error = std::string("connect ") + host + ": " + strerror(errno);
-        ::close(fd);
-        fd = -1;
+        if (ai->ai_addrlen > sizeof(sockaddr_storage)) continue;
+        CachedAddr ca;
+        std::memcpy(&ca.addr, ai->ai_addr, ai->ai_addrlen);
+        ca.len = static_cast<socklen_t>(ai->ai_addrlen);
+        ca.family = ai->ai_family;
+        ca.socktype = ai->ai_socktype;
+        ca.protocol = ai->ai_protocol;
+        addrs.push_back(ca);
     }
     freeaddrinfo(res);
+    for (const auto& ca : addrs) {
+        fd = open_and_connect(ca, host, error);
+        if (fd >= 0) break;
+    }
+    if (fd >= 0) dns_cache().put(key, std::move(addrs));
     return fd;
+}
+
+struct SslSession {
+    mbedtls_ssl_session raw{};
+    SslSession() { mbedtls_ssl_session_init(&raw); }
+    ~SslSession() { mbedtls_ssl_session_free(&raw); }
+    SslSession(const SslSession&) = delete;
+    SslSession& operator=(const SslSession&) = delete;
+};
+
+class TlsSessionCache {
+public:
+    static constexpr size_t kMaxEntries = 16;
+
+    void apply(const std::string& key, mbedtls_ssl_context* ssl) {
+        std::lock_guard lock(mu_);
+        for (const auto& e : entries_) {
+            if (e.key == key) {
+                mbedtls_ssl_set_session(ssl, &e.session->raw);
+                return;
+            }
+        }
+    }
+
+    void save(const std::string& key, const mbedtls_ssl_context* ssl) {
+        auto s = std::make_unique<SslSession>();
+        if (mbedtls_ssl_get_session(ssl, &s->raw) != 0) return;
+        std::lock_guard lock(mu_);
+        for (auto it = entries_.begin(); it != entries_.end(); ++it) {
+            if (it->key == key) {
+                it->session = std::move(s);
+                return;
+            }
+        }
+        if (entries_.size() >= kMaxEntries) entries_.erase(entries_.begin());
+        entries_.push_back({key, std::move(s)});
+    }
+
+private:
+    struct Entry {
+        std::string key;
+        std::unique_ptr<SslSession> session;
+    };
+    std::mutex mu_;
+    std::vector<Entry> entries_;
+};
+
+TlsSessionCache& tls_sessions() {
+    static TlsSessionCache cache;
+    return cache;
 }
 
 }  // namespace
@@ -153,7 +299,7 @@ public:
         ::close(fd_);
     }
 
-    bool handshake(const std::string& host, std::string& error) {
+    bool handshake(const std::string& host, const std::string& port, std::string& error) {
         TlsContext& ctx = tls();
         if (!ctx.ok) {
             error = "tls unavailable";
@@ -165,6 +311,8 @@ public:
             error = "tls setup: " + tls_error(rc);
             return false;
         }
+        std::string key = host + ":" + port;
+        tls_sessions().apply(key, &ssl_);
         mbedtls_ssl_set_bio(&ssl_, this, &TlsTransport::bio_send, &TlsTransport::bio_recv, nullptr);
         while ((rc = mbedtls_ssl_handshake(&ssl_)) != 0) {
             if (rc == MBEDTLS_ERR_SSL_WANT_READ || rc == MBEDTLS_ERR_SSL_WANT_WRITE) continue;
@@ -177,6 +325,7 @@ public:
             }
             return false;
         }
+        tls_sessions().save(key, &ssl_);
         return true;
     }
 
@@ -261,13 +410,17 @@ void Connection::close() {
     buf_pos_ = buf_len_ = 0;
 }
 
+void warmup() {
+    (void)tls();
+}
+
 bool Connection::connect_to(const Url& url) {
     close();
     int fd = connect_tcp(url.host, url.port, error_);
     if (fd < 0) return false;
     if (url.tls) {
         auto t = std::make_unique<TlsTransport>(fd);
-        if (!t->handshake(url.host, error_)) return false;
+        if (!t->handshake(url.host, url.port, error_)) return false;
         transport_ = std::move(t);
     } else {
         transport_ = std::make_unique<PlainTransport>(fd);

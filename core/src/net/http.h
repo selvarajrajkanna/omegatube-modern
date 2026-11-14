@@ -181,4 +181,7 @@ private:
     std::string error_;
 };
 
+// Pre-warms the shared TLS context (e.g., parsing root CA certificates) on a background thread.
+void warmup();
+
 }  // namespace omega::net
