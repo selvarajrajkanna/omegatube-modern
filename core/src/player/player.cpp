@@ -612,7 +612,7 @@ void Player::on_buffer_status(esp::StreamType type, esp::BufferStatus status, vo
         OLOG("%s buffer underrun: position=%lld submitted=%lld (lead %lld ms) demux queue=%lld ms", stream_name(type),
              static_cast<long long>(p->position_ms_.load()), static_cast<long long>(t.submitted_ms.load()),
              static_cast<long long>(t.submitted_ms - p->position_ms_), static_cast<long long>(queued));
-    } else if (status != esp::BUFFER_FULL) {
+    } else if (status != esp::BUFFER_OVERRUN) {
         Track& t = type == esp::STREAM_VIDEO ? p->video_ : p->audio_;
         p->notify_track(t);
     }
