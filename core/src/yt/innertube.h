@@ -173,10 +173,6 @@ public:
     };
     const Refusal& refusal() const { return refusal_; }
 
-    // Takes over the visitor id and web client version another client already fetched. A fresh client would GET the
-    // YouTube home page (hundreds of KB) before its first request; short-lived clients (previews) borrow instead.
-    void adopt_session(Client& from);
-
     // Raw JSON of the last player/browse response (dev tooling: ytcheck --dump).
     const std::string& last_response() const { return last_response_; }
 

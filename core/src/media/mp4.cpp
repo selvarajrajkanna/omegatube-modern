@@ -25,12 +25,6 @@ struct Cursor {
         p += 2;
         return v;
     }
-    uint32_t u24() {
-        if (!has(3)) { uint32_t v = 0; while (has(1)) v = (v << 8) | *p++; return v; }
-        uint32_t v = (uint32_t(p[0]) << 16) | (uint32_t(p[1]) << 8) | p[2];
-        p += 3;
-        return v;
-    }
     uint32_t u32() {
         if (!has(4)) { uint32_t v = 0; while (has(1)) v = (v << 8) | *p++; return v; }
         uint32_t v = (uint32_t(p[0]) << 24) | (uint32_t(p[1]) << 16) | (uint32_t(p[2]) << 8) | p[3];

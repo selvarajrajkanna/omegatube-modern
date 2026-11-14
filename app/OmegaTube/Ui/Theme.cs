@@ -21,8 +21,6 @@ namespace OmegaTube.Ui
         public static readonly Color PanelLine = Rgb(0x2a2a30);     // separators
         public static readonly Color TextMuted = Rgb(0x70707a);
         public static readonly Color Success = Rgb(0x2ba640);
-        // Grey rather than a white tint: as light as before on dark scenes, but it darkens bright ones under the icons.
-        public static readonly Color GlassButton = new Color(0.24f, 0.24f, 0.24f, 0.6f);
 
         public const float TitleSize = 34f;
         public const float BodySize = 24f;

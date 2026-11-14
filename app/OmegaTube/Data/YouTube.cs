@@ -78,7 +78,7 @@ namespace OmegaTube.Data
     public class Comment
     {
         public string Id = "", Author = "", Avatar = "", Text = "", Published = "", Likes = "", Replies = "", ReplyToken = "";
-        public bool Pinned, Creator, Hearted, Liked, Disliked;
+        public bool Pinned, Creator, Liked, Disliked;
     }
 
     // A page of comments; the first one also carries the header (count, sort tokens, posting params).
@@ -237,7 +237,7 @@ namespace OmegaTube.Data
                 Id = Json.Str(o, "id"), Author = Json.Str(o, "author"), Avatar = Json.Str(o, "avatar"),
                 Text = Json.Str(o, "text"), Published = Json.Str(o, "published"), Likes = Json.Str(o, "likes"),
                 Replies = Json.Str(o, "replies"), Pinned = Json.Bool(o, "pinned"), Creator = Json.Bool(o, "creator"),
-                Hearted = Json.Bool(o, "hearted"), ReplyToken = Json.Str(o, "replyToken"),
+                ReplyToken = Json.Str(o, "replyToken"),
                 Liked = Json.Bool(o, "liked"), Disliked = Json.Bool(o, "disliked"),
             };
         }

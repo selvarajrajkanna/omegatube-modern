@@ -424,21 +424,6 @@ bool Client::ensure_visitor(std::string& error) {
     return true;
 }
 
-void Client::adopt_session(Client& from) {
-    std::string visitor, version;
-    {
-        std::lock_guard<std::mutex> lock(from.mutex_);
-        visitor = from.visitor_data_;
-        version = from.web_client_version_;
-    }
-    if (visitor.empty()) return;
-    std::lock_guard<std::mutex> lock(mutex_);
-    if (visitor_data_.empty()) {
-        visitor_data_ = std::move(visitor);
-        web_client_version_ = std::move(version);
-    }
-}
-
 net::Headers Client::stream_headers() const { return {{"User-Agent", cfg::str({"innertube", "player", "userAgent"})}}; }
 
 namespace {
