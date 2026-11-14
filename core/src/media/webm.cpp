@@ -324,7 +324,8 @@ bool WebmReader::parse_block(const uint8_t* p, size_t n, bool simple, bool has_r
     }
     Sample s;
     s.data.assign(c.p, c.end);
-    s.pts_ms = static_cast<int64_t>((cluster_time_ + rel) * static_cast<int64_t>(timecode_scale_) / 1000000);
+    int64_t ns = (cluster_time_ + rel) * static_cast<int64_t>(timecode_scale_);
+    s.pts_ms = (ns >= 0 ? ns + 500000 : ns - 500000) / 1000000;
     s.key = simple ? (flags & 0x80) != 0 : !has_reference;
     out.push_back(std::move(s));
     return true;

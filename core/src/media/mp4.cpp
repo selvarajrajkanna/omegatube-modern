@@ -415,7 +415,7 @@ bool Fmp4Reader::read_fragment(std::deque<Sample>& out) {
                     const uint8_t* src = buf.data() + (at - payload_start);
                     s.data.assign(src, src + run.sizes[i]);
                     int64_t pts = static_cast<int64_t>(next_dts_) + run.ctos[i] - track_.media_time;
-                    s.pts_ms = static_cast<int64_t>(std::max<int64_t>(pts, 0) * to_ms);
+                    s.pts_ms = static_cast<int64_t>(std::max<int64_t>(pts, 0) * to_ms + 0.5);
                     s.duration_ms = static_cast<int64_t>(run.durations[i] * to_ms + 0.5);
                     s.key = !(run.flags[i] & 0x10000);
                     out.push_back(std::move(s));
