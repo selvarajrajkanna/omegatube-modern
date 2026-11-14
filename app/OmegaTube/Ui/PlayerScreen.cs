@@ -220,8 +220,12 @@ namespace OmegaTube.Ui
             titleLabel.Position = new Position(ProgressX, TitleY);
             SetTitle(item.Title);
             chrome.Add(titleLabel);
-            metaLabel = Widgets.Label(MetaLine(), Theme.SmallSize - 1, new Color(0.85f, 0.85f, 0.88f, 1f), 1600, 24);
+            metaLabel = Widgets.Label("", Theme.SmallSize - 2, new Color(0.90f, 0.90f, 0.92f, 1f), ProgressWidth, 26);
+            metaLabel.BackgroundColor = M3TitleSurface;
+            Widgets.Round(metaLabel, 13);
+            metaLabel.VerticalAlignment = VerticalAlignment.Center;
             metaLabel.Position = new Position(ProgressX, MetaY);
+            SetMeta(MetaLine());
             chrome.Add(metaLabel);
             signedIn = YouTube.SignedIn();
             AddChip(Social.Channel, null, string.IsNullOrEmpty(item.Channel) ? T("Channel") : item.Channel);
@@ -439,7 +443,7 @@ namespace OmegaTube.Ui
             {
                 SetTitle(info.Title);   // the card showed the list's name
             }
-            metaLabel.Text = MetaLine();
+            SetMeta(MetaLine());
             section.SetDescription(MetaLine(), info.Description);
             if (details != null && details.ChannelId.Length == 0 && info.ChannelId.Length > 0)
             {
@@ -601,6 +605,19 @@ namespace OmegaTube.Ui
             titleLabel.SizeWidth = Math.Min(ProgressWidth, Math.Max(100, (int)(title.Length * (Theme.BodySize + 2) * 0.54f) + 36));
         }
 
+        private void SetMeta(string meta)
+        {
+            meta = meta ?? "";
+            if (meta.Length == 0)
+            {
+                metaLabel.Hide();
+                return;
+            }
+            metaLabel.Text = "  " + meta + "  ";
+            metaLabel.SizeWidth = Math.Min(ProgressWidth, Math.Max(80, (int)(meta.Length * (Theme.SmallSize - 2) * 0.56f) + 32));
+            metaLabel.Show();
+        }
+
         private Chip AddChip(Social kind, string icon, string text)
         {
             var view = new View { Size = new Size(140, ChipH), Position = new Position(0, ActionsY),
@@ -697,7 +714,7 @@ namespace OmegaTube.Ui
             {
                 d.ChannelId = info.ChannelId ?? "";   // videoDetails.channelId from the player answer
             }
-            metaLabel.Text = MetaLine();
+            SetMeta(MetaLine());
             section.SetDescription(MetaLine(), info.Description);
             Chip channel = ChipOf(Social.Channel);
             if (d.Channel.Length > 0)
