@@ -103,7 +103,7 @@ OMEGA_API char* omega_yt_playlist(const char* video_id, const char* playlist_id)
 // A whole playlist in order (paged): same JSON as search plus "title" (first page); items carry "playlistId".
 OMEGA_API char* omega_yt_playlist_page(const char* playlist_id, const char* continuation);
 // Related videos of video_id (player suggestions). Same JSON as search.
-OMEGA_API char* omega_yt_related(const char* video_id);
+OMEGA_API char* omega_yt_related(const char* video_id, const char* continuation);
 // Watch-page details: {"channelId","channel","channelAvatar","subscribers","date",
 // "likeStatus":"LIKE|DISLIKE|INDIFFERENT|" (empty: signed out),"subscribed":1|0|-1} or {"error"}.
 OMEGA_API char* omega_yt_details(const char* video_id);

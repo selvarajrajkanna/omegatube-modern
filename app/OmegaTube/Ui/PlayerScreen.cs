@@ -837,7 +837,7 @@ namespace OmegaTube.Ui
                 chrome.Add(playlistRow);
                 nextY += Theme.RowHeight;
             }
-            suggestions = new FeedRow(T("Suggested videos"), c => YouTube.Related(item.Id), 1920 - 40)
+            suggestions = new FeedRow(T("Suggested videos"), c => YouTube.Related(item.Id, c), 1920 - 40)
             {
                 Position = new Position(40, nextY),
             };

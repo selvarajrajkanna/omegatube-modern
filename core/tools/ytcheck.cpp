@@ -87,7 +87,7 @@ int main(int argc, char** argv) {
         error.clear();
         omega::yt::Client client;
         omega::yt::Feed feed;
-        if (!client.related(argv[2], token, feed, error)) {
+        if (!client.related(argv[2], "", token, feed, error)) {
             printf("next failed: %s\n", error.c_str());
             return 1;
         }

@@ -109,8 +109,8 @@ namespace OmegaTube
         private static I_ipl _playerSeek;
         private static I_ipd _playerSetRate;
         private static V_ipStats _playerGetStats;
-        private static Ip_s _ytSuggest, _reportUpload, _authPoll, _qrEncode, _ytRelated, _ytDetails, _sbSegments, _authSwitch;
-        private static Ip_ss _ytSearch, _ytBrowse, _ytPlaylist, _ytPlaylistPage, _ytCaptions, _ytRate, _ytChannel, _ytComments, _ytPostComment;
+        private static Ip_s _ytSuggest, _reportUpload, _authPoll, _qrEncode, _ytDetails, _sbSegments, _authSwitch;
+        private static Ip_ss _ytSearch, _ytBrowse, _ytPlaylist, _ytPlaylistPage, _ytRelated, _ytCaptions, _ytRate, _ytChannel, _ytComments, _ytPostComment;
         private static Ip_sss _ytPostReply, _ytCommentAction;
         private static Ip_si _ytSubscribe;
         private static V_s _init;
@@ -144,7 +144,7 @@ namespace OmegaTube
             _qrEncode = Fn<Ip_s>("omega_qr_encode");
             _ytPlaylist = Fn<Ip_ss>("omega_yt_playlist");
             _ytPlaylistPage = Fn<Ip_ss>("omega_yt_playlist_page");
-            _ytRelated = Fn<Ip_s>("omega_yt_related");
+            _ytRelated = Fn<Ip_ss>("omega_yt_related");
             _playerFormats = Fn<Ip_ip>("omega_player_formats");
             _playerSetRate = Fn<I_ipd>("omega_player_set_rate");
             _ytCaptions = Fn<Ip_ss>("omega_yt_captions");
@@ -192,7 +192,7 @@ namespace OmegaTube
         public static IntPtr QrEncode(string text) => _qrEncode(text ?? "");
         public static IntPtr YtPlaylist(string videoId, string playlistId) => _ytPlaylist(videoId ?? "", playlistId ?? "");
         public static IntPtr YtPlaylistPage(string playlistId, string continuation) => _ytPlaylistPage(playlistId ?? "", continuation ?? "");
-        public static IntPtr YtRelated(string videoId) => _ytRelated(videoId ?? "");
+        public static IntPtr YtRelated(string videoId, string continuation = "") => _ytRelated(videoId ?? "", continuation ?? "");
         public static IntPtr YtCaptions(string url, string translateTo) => _ytCaptions(url ?? "", translateTo ?? "");
         public static IntPtr YtDetails(string videoId) => _ytDetails(videoId ?? "");
         public static IntPtr YtRate(string videoId, string rating) => _ytRate(videoId ?? "", rating ?? "");

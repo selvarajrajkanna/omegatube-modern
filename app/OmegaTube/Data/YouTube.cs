@@ -241,9 +241,9 @@ namespace OmegaTube.Data
             };
         }
 
-        public static Task<FeedPage> Related(string videoId)
+        public static Task<FeedPage> Related(string videoId, string continuation = "")
         {
-            return Task.Run(() => ToPage(Call(NativeCore.YtRelated(videoId))));
+            return Task.Run(() => ToPage(Call(NativeCore.YtRelated(videoId, continuation ?? ""))));
         }
 
         // Signed-in feeds: FEwhat_to_watch (recommended), FEsubscriptions, FEhistory.
