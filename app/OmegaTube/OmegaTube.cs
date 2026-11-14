@@ -25,7 +25,7 @@ namespace OmegaTube
             BugReport.Init(DirectoryInfo.Data);
             UiGuard.Init(this);
 
-            Window window = Window.Instance;
+            Window window = Window.Default;
             // Keep browsing opaque; the player clears the background for the video plane.
             window.BackgroundColor = Color.Black;
             window.KeyEvent += OnKeyEvent;
@@ -121,7 +121,7 @@ namespace OmegaTube
                 top.Root.Hide();
             }
             stack.Add(screen);
-            Window.Instance.Add(screen.Root);
+            Window.Default.Add(screen.Root);
             try
             {
                 screen.OnShow();
@@ -130,7 +130,7 @@ namespace OmegaTube
             {
                 // Half-shown screen: take it back off so the caller's error report lands on a sane stack.
                 stack.Remove(screen);
-                Window.Instance.Remove(screen.Root);
+                Window.Default.Remove(screen.Root);
                 if (top != null)
                 {
                     top.Root.Show();
@@ -168,7 +168,7 @@ namespace OmegaTube
                 }
                 if (dialog != null)
                 {
-                    Window.Instance.Remove(dialog);
+                    Window.Default.Remove(dialog);
                     dialog = null;
                 }
                 PushReport(BugReport.Describe(e) + "\n(in " + where + ")", false, true);
@@ -212,7 +212,7 @@ namespace OmegaTube
             Screen top = stack[stack.Count - 1];
             stack.RemoveAt(stack.Count - 1);
             top.OnHide();
-            Window.Instance.Remove(top.Root);
+            Window.Default.Remove(top.Root);
             top.Root.Dispose();
             Screen below = stack[stack.Count - 1];
             below.Root.Show();
@@ -243,10 +243,10 @@ namespace OmegaTube
             Screen top = stack[stack.Count - 1];
             stack.RemoveAt(stack.Count - 1);
             top.OnHide();
-            Window.Instance.Remove(top.Root);
+            Window.Default.Remove(top.Root);
             top.Root.Dispose();
             stack.Add(screen);
-            Window.Instance.Add(screen.Root);
+            Window.Default.Add(screen.Root);
             screen.OnShow();
         }
 
@@ -260,7 +260,7 @@ namespace OmegaTube
             }
             dialog = new ConfirmDialog(question, onYes);
             dialog.Closed += () => dialog = null;
-            Window.Instance.Add(dialog);
+            Window.Default.Add(dialog);
         }
 
         // startMs >= 0: start there (e.g. where the home's video preview was); -1: the usual resume point.

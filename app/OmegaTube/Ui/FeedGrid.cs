@@ -110,7 +110,7 @@ namespace OmegaTube.Ui
         private async Task ShowCached(string key, int gen)
         {
             FeedPage cached = await Task.Run(() => LocalStore.LoadFeed(key));
-            if (cached == null || gen != generation || disposed || fresh)
+            if (cached == null || gen != generation || Disposed || fresh)
             {
                 return;
             }
@@ -304,7 +304,7 @@ namespace OmegaTube.Ui
             loading = true;
             int gen = generation;
             FeedPage page = await loader(fresh ? continuation : "");
-            if (gen != generation || disposed)
+            if (gen != generation || Disposed)
             {
                 return;  // the grid switched to another feed meanwhile
             }
@@ -526,7 +526,7 @@ namespace OmegaTube.Ui
         // and the highlights on screen. Returns false when everything near the focus is filled.
         private bool BuildNext()
         {
-            if (disposed || !Visibility)
+            if (Disposed || !Visibility)
             {
                 return false;   // a hidden feed (other menu entry): Wake() when shown again
             }

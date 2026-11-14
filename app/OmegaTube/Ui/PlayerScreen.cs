@@ -384,7 +384,7 @@ namespace OmegaTube.Ui
 
         public override void OnShow()
         {
-            Window.Instance.BackgroundColor = Color.Transparent;
+            Window.Default.BackgroundColor = Color.Transparent;
             ShowChrome(Focus.Hidden);
             tick = new Timer(250);
             tick.Tick += (s, e) => UiGuard.Tick("PlayerScreen.OnTick", () => { OnTick(); return true; });
@@ -400,7 +400,7 @@ namespace OmegaTube.Ui
         private async Task Start()
         {
             IntPtr window = App.EcoreWindow;
-            int w = (int)Window.Instance.WindowSize.Width, h = (int)Window.Instance.WindowSize.Height;
+            int w = (int)Window.Default.WindowSize.Width, h = (int)Window.Default.WindowSize.Height;
             if (App.Config.SponsorBlockEnabled && segments.Count == 0)
             {
                 UiGuard.Fire("PlayerScreen.LoadSegments", LoadSegments);
@@ -859,7 +859,7 @@ namespace OmegaTube.Ui
         public override void OnHide()
         {
             Close();
-            Window.Instance.BackgroundColor = Color.Black;
+            Window.Default.BackgroundColor = Color.Black;
         }
 
         public override void OnPause()

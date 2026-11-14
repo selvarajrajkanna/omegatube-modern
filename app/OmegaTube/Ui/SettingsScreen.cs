@@ -427,7 +427,7 @@ namespace OmegaTube.Ui
         private void OpenNotes()
         {
             notesLayer = new Layer();
-            Window.Instance.AddLayer(notesLayer);
+            Window.Default.AddLayer(notesLayer);
             var scrim = Widgets.Box(Theme.Scrim, 1920, 1080);
             notesLayer.Add(scrim);
             var card = Widgets.Rounded(Theme.Panel, 1200, 900, Theme.PanelRadius);
@@ -475,7 +475,7 @@ namespace OmegaTube.Ui
 
         private void CloseNotes()
         {
-            Window.Instance.RemoveLayer(notesLayer);
+            Window.Default.RemoveLayer(notesLayer);
             notesLayer.Dispose();
             notesLayer = null;
         }

@@ -162,7 +162,7 @@ namespace OmegaTube.Ui
             loading = true;
             FeedPage page = await loader(fresh ? continuation : "");
             loading = false;
-            if (disposed)
+            if (Disposed)
             {
                 return;
             }
@@ -284,7 +284,7 @@ namespace OmegaTube.Ui
         // then the one on the left. Returns false when there is none left to fill.
         public bool BuildNext()
         {
-            if (disposed)
+            if (Disposed)
             {
                 return false;
             }

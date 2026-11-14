@@ -85,7 +85,7 @@ namespace OmegaTube.Ui
         private async Task ShowCached(string key, int gen)
         {
             FeedPage cached = await Task.Run(() => LocalStore.LoadFeed(key));
-            if (cached == null || cached.Shelves.Count == 0 || gen != generation || disposed || fresh)
+            if (cached == null || cached.Shelves.Count == 0 || gen != generation || Disposed || fresh)
             {
                 return;
             }
@@ -190,7 +190,7 @@ namespace OmegaTube.Ui
                 UiGuard.Report("ShelfList.Load", e);
                 return;
             }
-            if (gen != generation || disposed)
+            if (gen != generation || Disposed)
             {
                 return;
             }
@@ -320,7 +320,7 @@ namespace OmegaTube.Ui
         // One card filled per call, in the rows around the focus (see FillOrder).
         private bool BuildNext()
         {
-            if (disposed || !Visibility)
+            if (Disposed || !Visibility)
             {
                 return false;   // a hidden feed (other menu entry): Wake() when shown again
             }
