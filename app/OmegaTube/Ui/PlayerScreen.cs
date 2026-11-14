@@ -2206,18 +2206,33 @@ namespace OmegaTube.Ui
             barB.Show();
         }
 
+        private static readonly (int Width, int Height) HardwareMaxRes = ReadHardwareMaxResolution();
+
+        private static (int Width, int Height) ReadHardwareMaxResolution()
+        {
+            int w = Tizen.System.Information.TryGetValue("http://tizen.org/feature/screen.width", out int sw) ? sw : 0;
+            int h = Tizen.System.Information.TryGetValue("http://tizen.org/feature/screen.height", out int sh) ? sh : 0;
+            return (w, h);
+        }
+
         private List<VideoQuality> PanelQualities()
         {
-            if (info.Qualities.Count > 0)
+            List<VideoQuality> source = info.Qualities;
+            if (source.Count == 0)
             {
-                return info.Qualities;
+                source = new List<VideoQuality>();
+                foreach (int h in DefaultHeights)
+                {
+                    source.Add(new VideoQuality { Height = h });
+                }
             }
-            var list = new List<VideoQuality>();
-            foreach (int h in DefaultHeights)
+            var (hwW, hwH) = HardwareMaxRes;
+            if (hwW <= 0 || hwH <= 0)
             {
-                list.Add(new VideoQuality { Height = h });
+                return source;
             }
-            return list;
+            var supported = source.FindAll(q => q.Height <= hwH && (q.Width <= 0 || q.Width <= hwW));
+            return supported.Count > 0 ? supported : source;
         }
 
         private string AudioName(string id)
