@@ -101,6 +101,7 @@ private:
     std::string fresh_url(Track& t);
     void feed_loop(Track& t);
     void control_loop();
+    void notify_track(Track& t);
 
     static void on_error(int err, void* self);
     static void on_buffer_status(esp::StreamType type, esp::BufferStatus status, void* self);
@@ -123,6 +124,8 @@ private:
     Track video_, audio_;
     std::atomic<bool> running_{false};
     std::atomic<bool> prepared_{false}, prepare_failed_{false}, paused_{false}, eos_{false};
+    std::mutex state_mutex_;
+    std::condition_variable state_cv_;
     std::atomic<uint32_t> errors_{0}, stalls_{0};
     std::atomic<int64_t> longest_stall_ms_{0}, position_ms_{0};
     std::thread control_thread_;

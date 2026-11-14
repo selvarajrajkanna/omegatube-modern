@@ -42,8 +42,12 @@ Player::Player(PlayerConfig cfg) : cfg_(std::move(cfg)) {
 }
 
 Player::~Player() {
-    running_ = false;
-    for (Track* t : {&video_, &audio_}) t->cv.notify_all();
+    {
+        std::lock_guard<std::mutex> lock(state_mutex_);
+        running_ = false;
+    }
+    state_cv_.notify_all();
+    for (Track* t : {&video_, &audio_}) notify_track(*t);
     if (control_thread_.joinable()) control_thread_.join();
     for (Track* t : {&video_, &audio_}) {
         if (t->feed_thread.joinable()) t->feed_thread.join();
@@ -318,8 +322,18 @@ void Player::start_track(Track& t, media::Demuxer* reader, net::StreamSource* so
     t.feed_thread = std::thread([this, &t] { feed_loop(t); });
 }
 
+void Player::notify_track(Track& t) {
+    {
+        std::lock_guard<std::mutex> lock(t.mutex);
+    }
+    t.cv.notify_all();
+}
+
 void Player::stop_track(Track& t) {
-    t.active = false;
+    {
+        std::lock_guard<std::mutex> lock(t.mutex);
+        t.active = false;
+    }
     t.cv.notify_all();
     if (t.feed_thread.joinable()) t.feed_thread.join();
     if (t.demux_thread.joinable()) t.demux_thread.join();
@@ -423,7 +437,11 @@ void Player::demux_loop(Track& t, media::Demuxer* reader_raw, net::StreamSource*
 }
 
 void Player::feed_loop(Track& t) {
-    while (running_ && t.active && !t.ready_to_feed) sleep_ms(5);
+    {
+        std::unique_lock<std::mutex> lock(t.mutex);
+        t.cv.wait(lock, [&] { return !running_ || !t.active || t.ready_to_feed.load(); });
+    }
+    if (!running_ || !t.active) return;
     OLOG("%s feed: start", stream_name(t.type));
     while (running_ && t.active) {
         media::Sample s;
@@ -446,7 +464,12 @@ void Player::feed_loop(Track& t) {
 
         // Pace submission on the playback clock so ESPlayer never holds more than feed_ahead_ms
         // (keeps memory bounded and makes seeks / quality switches cheap). Paused => clock frozen => we wait.
-        while (running_ && t.active && s.pts_ms > position_ms_ + cfg_.feed_ahead_ms) sleep_ms(20);
+        {
+            std::unique_lock<std::mutex> lock(t.mutex);
+            t.cv.wait(lock, [&] {
+                return !running_ || !t.active || s.pts_ms <= position_ms_ + cfg_.feed_ahead_ms;
+            });
+        }
         if (!running_ || !t.active) break;
         // After a seek (or a live start) the audio segment starts a bit before the video keyframe.
         if (s.pts_ms < 0 || (t.type == esp::STREAM_AUDIO && s.pts_ms < feed_from_ms_)) continue;
@@ -464,7 +487,8 @@ void Player::feed_loop(Track& t) {
             int st = api_->submit_packet(handle_, &pkt);
             if (st == esp::SUBMIT_SUCCESS) break;
             if (st == esp::SUBMIT_FULL || st == esp::SUBMIT_NOT_PREPARED) {
-                sleep_ms(10);
+                std::unique_lock<std::mutex> lock(t.mutex);
+                t.cv.wait_for(lock, std::chrono::milliseconds(50), [&] { return !running_ || !t.active; });
                 if (!running_ || !t.active) return;
                 continue;
             }
@@ -477,7 +501,10 @@ void Player::feed_loop(Track& t) {
 }
 
 void Player::control_loop() {
-    while (running_ && !prepared_ && !prepare_failed_) sleep_ms(10);
+    {
+        std::unique_lock<std::mutex> lock(state_mutex_);
+        state_cv_.wait(lock, [&] { return !running_ || prepared_ || prepare_failed_; });
+    }
     if (!running_ || prepare_failed_) return;
     int rc = api_->start(handle_);
     started_at_ = Clock::now();
@@ -493,7 +520,12 @@ void Player::control_loop() {
         api_->get_playing_time(handle_, &pos);
         // Until seek_done the player still reports the old position: keep the target so feeding
         // (paced on position_ms_) is not throttled against a stale clock.
-        if (!seek_pending_) position_ms_ = static_cast<int64_t>(pos);
+        if (!seek_pending_) {
+            int64_t new_pos = static_cast<int64_t>(pos);
+            if (new_pos != position_ms_.exchange(new_pos)) {
+                for (Track* t : {&video_, &audio_}) notify_track(*t);
+            }
+        }
         if (paused_ || eos_ || ms_since(started_at_) < stall_grace_until_ms_) {
             last_advance = Clock::now();
             continue;
@@ -576,9 +608,13 @@ void Player::on_buffer_status(esp::StreamType type, esp::BufferStatus status, vo
             std::lock_guard<std::mutex> lock(t.mutex);
             queued = t.queued_ms;
         }
+        t.cv.notify_all();
         OLOG("%s buffer underrun: position=%lld submitted=%lld (lead %lld ms) demux queue=%lld ms", stream_name(type),
              static_cast<long long>(p->position_ms_.load()), static_cast<long long>(t.submitted_ms.load()),
              static_cast<long long>(t.submitted_ms - p->position_ms_), static_cast<long long>(queued));
+    } else if (status != esp::BUFFER_FULL) {
+        Track& t = type == esp::STREAM_VIDEO ? p->video_ : p->audio_;
+        p->notify_track(t);
     }
 }
 
@@ -590,23 +626,39 @@ void Player::on_eos(void* self) {
 void Player::on_ready_to_prepare(esp::StreamType type, void* self) {
     auto* p = static_cast<Player*>(self);
     OLOG("esp ready_to_prepare(%s)", stream_name(type));
-    (type == esp::STREAM_VIDEO ? p->video_ : p->audio_).ready_to_feed = true;
+    Track& t = (type == esp::STREAM_VIDEO ? p->video_ : p->audio_);
+    {
+        std::lock_guard<std::mutex> lock(t.mutex);
+        t.ready_to_feed = true;
+    }
+    t.cv.notify_all();
 }
 
 void Player::on_prepare_done(bool ok, void* self) {
     auto* p = static_cast<Player*>(self);
     OLOG("esp prepare_done ok=%d", ok ? 1 : 0);
-    (ok ? p->prepared_ : p->prepare_failed_) = true;
+    {
+        std::lock_guard<std::mutex> lock(p->state_mutex_);
+        (ok ? p->prepared_ : p->prepare_failed_) = true;
+    }
+    p->state_cv_.notify_all();
 }
 
 void Player::on_ready_to_seek(esp::StreamType type, uint64_t time_ms, void* self) {
     auto* p = static_cast<Player*>(self);
     OLOG("esp ready_to_seek(%s, %llu)", stream_name(type), static_cast<unsigned long long>(time_ms));
-    (type == esp::STREAM_VIDEO ? p->video_ : p->audio_).ready_to_feed = true;
+    Track& t = (type == esp::STREAM_VIDEO ? p->video_ : p->audio_);
+    {
+        std::lock_guard<std::mutex> lock(t.mutex);
+        t.ready_to_feed = true;
+    }
+    t.cv.notify_all();
 }
 
 void Player::on_seek_done(void* self) {
-    static_cast<Player*>(self)->seek_pending_ = false;
+    auto* p = static_cast<Player*>(self);
+    p->seek_pending_ = false;
+    for (Track* t : {&p->video_, &p->audio_}) p->notify_track(*t);
     OLOG("esp seek_done");
 }
 
