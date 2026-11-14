@@ -258,7 +258,7 @@ namespace OmegaTube.Ui
             AddButton(Action.Restart, "restart", ref x);
             playButton = AddButton(Action.PlayPause, "pause", ref x);
             AddButton(Action.Next, "skip_next", ref x);
-            AddButton(Action.Comments, "chat", ref x);
+            AddButton(Action.Comments, null, ref x);
             AddButton(Action.Description, "info_outline", ref x);
             // Right group, right to left.
             AddRightButton(Action.Stats, "stats");
@@ -325,8 +325,28 @@ namespace OmegaTube.Ui
                                   BackgroundColor = M3Surface, PivotPoint = Tizen.NUI.PivotPoint.Center,
                                   PositionUsesPivotPoint = false };
             Widgets.Round(view, ButtonSize / 2);
-            var img = new ImageView { ResourceUrl = Theme.Icon(icon), Size = new Size(26, 26), Position = new Position(10, 10) };
-            view.Add(img);
+            ImageView img = null;
+            if (action == Action.Comments)
+            {
+                // Native Tizen.NUI chat bubble icon.
+                var bubble = Widgets.Rounded(Theme.Text, 22, 16, 4);
+                bubble.Position = new Position(12, 13);
+                var line1 = Widgets.Rounded(M3Surface, 14, 2, 1);
+                line1.Position = new Position(4, 5);
+                bubble.Add(line1);
+                var line2 = Widgets.Rounded(M3Surface, 9, 2, 1);
+                line2.Position = new Position(4, 10);
+                bubble.Add(line2);
+                view.Add(bubble);
+                var tail = Widgets.Rounded(Theme.Text, 5, 5, 1);
+                tail.Position = new Position(14, 27);
+                view.Add(tail);
+            }
+            else
+            {
+                img = new ImageView { ResourceUrl = Theme.Icon(icon), Size = new Size(26, 26), Position = new Position(10, 10) };
+                view.Add(img);
+            }
             chrome.Add(view);
             var indicator = Widgets.Rounded(Theme.Accent, 16, 3, 1.5f);
             indicator.Position = new Position(x + (ButtonSize - 16) / 2, ButtonsY + ButtonSize + 5);
