@@ -434,17 +434,6 @@ size_t Connection::read_some(void* dst, size_t n) {
     return got;
 }
 
-size_t Connection::read(void* dst, size_t n) {
-    auto* out = static_cast<uint8_t*>(dst);
-    size_t total = 0;
-    while (total < n) {
-        size_t got = read_some(out + total, n - total);
-        if (got == 0) break;
-        total += got;
-    }
-    return total;
-}
-
 std::string Connection::read_all(size_t limit) {
     std::string out;
     char tmp[16384];

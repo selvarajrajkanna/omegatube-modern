@@ -283,7 +283,7 @@ namespace OmegaTube.Ui
             panel = new ListPanel();
             Root.Add(panel);
 
-            statsLabel = Widgets.Label("", Theme.SmallSize, Theme.Text, 820, 305);
+            statsLabel = Widgets.Label("", Theme.SmallSize, Theme.Text, 860, 340);
             statsLabel.MultiLine = true;
             statsLabel.BackgroundColor = Theme.Scrim;
             Widgets.Round(statsLabel, 10);
@@ -970,6 +970,7 @@ namespace OmegaTube.Ui
                     (info.Current != null ? "   playing " + QualityLabel(info.Current) : "") +
                     (info.AudioTrack.Length > 0 ? "   audio " + info.AudioTrack : "") + "\n" +
                     (sysStatsLine.Length > 0 ? sysStatsLine + "\n" : "") +
+                    $"  tizen {BugReport.TizenVersion}   sw {BugReport.FirmwareVersion}   app {BugReport.AppVersion}\n" +
                     NativeCore.RecentLog(3);
             }
             if (toast.Visibility && now > toastUntil)

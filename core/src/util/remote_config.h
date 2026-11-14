@@ -15,7 +15,6 @@ bool refresh(std::string& error);  // network: fetch the repo's remote-config.js
 nlohmann::json snapshot();
 
 std::string str(std::initializer_list<const char*> path, const std::string& fallback = "");
-int num(std::initializer_list<const char*> path, int fallback = 0);
 nlohmann::json obj(std::initializer_list<const char*> path);
 
 // User preferences forwarded by the shell (InnerTube hl/gl).

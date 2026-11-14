@@ -40,7 +40,6 @@ private:
 
     uint64_t next_dts_ = 0;
     std::vector<Run> runs_;
-    uint64_t base_dts_ = 0;
 
     // A box read ahead by read_header() (the first moof when there is no sidx).
     bool has_pending_ = false;

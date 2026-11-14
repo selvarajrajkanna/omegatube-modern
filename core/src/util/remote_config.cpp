@@ -101,12 +101,6 @@ std::string str(std::initializer_list<const char*> path, const std::string& fall
     return v && v->is_string() ? v->get<std::string>() : fallback;
 }
 
-int num(std::initializer_list<const char*> path, int fallback) {
-    std::lock_guard<std::mutex> lock(g_mutex);
-    const json* v = lookup(g_config, path);
-    return v && v->is_number() ? v->get<int>() : fallback;
-}
-
 json obj(std::initializer_list<const char*> path) {
     std::lock_guard<std::mutex> lock(g_mutex);
     const json* v = lookup(g_config, path);

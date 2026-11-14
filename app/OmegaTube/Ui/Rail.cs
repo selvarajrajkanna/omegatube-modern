@@ -32,7 +32,6 @@ namespace OmegaTube.Ui
         private bool drawnFocused;
 
         public int Index => index;
-        public int Count => items.Count;
 
         public Rail(IList<Entry> entries)
         {

@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using OmegaTube.Util;
 
@@ -9,22 +8,12 @@ namespace OmegaTube.Data
     public class VideoItem
     {
         public string Id, Title, Channel, Duration, Views, Published, Thumbnail;
-        public string Preview = "";   // animated-preview WebP (richThumbnail), empty when none
         public bool Live;
         public int WatchedPercent;   // account progress reported by YouTube (0 when unknown)
         // Playlist / mix card: plays Id within PlaylistId. Videos of a playlist keep Kind "video" + PlaylistId.
         public string PlaylistId = "";
         public string Kind = "video";   // video | playlist | mix
         public bool IsList => Kind == "playlist" || Kind == "mix";
-    }
-
-    // An animated preview decoded by the core into one sprite-sheet image: Frames cells of a Cols x Rows grid
-    // (row-major), each shown DelayMs. Path is the BMP on disk.
-    public class PreviewSheet
-    {
-        public string Path;
-        public int Cols, Rows, Frames, DelayMs;
-        public bool None;   // the video has no animated preview (nothing to retry)
     }
 
     public class SkipSegment
@@ -67,7 +56,7 @@ namespace OmegaTube.Data
         public List<VideoQuality> Qualities = new List<VideoQuality>();   // highest first
         public VideoQuality Current;
         public bool Live;
-        public string Title = "", Author = "", Description = "", Views = "", ChannelId = "";
+        public string Title = "", Description = "", Views = "", ChannelId = "";
         public List<AudioTrack> AudioTracks = new List<AudioTrack>();     // empty: single-language video
         public string AudioTrack = "";                                    // playing track id
         public List<CaptionTrack> Captions = new List<CaptionTrack>();
@@ -179,27 +168,6 @@ namespace OmegaTube.Data
                     Date = Json.Str(root, "date"), LikeStatus = Json.Str(root, "likeStatus"),
                     Subscribed = (int)Json.Num(root, "subscribed", -1), Error = Json.Str(root, "error", null),
                 };
-            });
-        }
-
-        // Downloads and decodes a video's animated preview into a sprite sheet at `path`. url: the item's preview
-        // URL, or "" to look it up by id. Null on a (possibly transient) failure; None = the video has no preview.
-        public static Task<PreviewSheet> Preview(string videoId, string url, string path)
-        {
-            return Task.Run(() =>
-            {
-                object root = Call(NativeCore.PreviewSheet(videoId, url ?? "", path));
-                if (Json.Str(root, "error", null) != null)
-                {
-                    return Json.Bool(root, "none") ? new PreviewSheet { None = true } : null;
-                }
-                var sheet = new PreviewSheet
-                {
-                    Path = path, Cols = (int)Json.Num(root, "cols"), Rows = (int)Json.Num(root, "rows"),
-                    Frames = (int)Json.Num(root, "frames"), DelayMs = (int)Json.Num(root, "delay", 100),
-                };
-                sheet.Frames = Math.Min(sheet.Frames, sheet.Cols * sheet.Rows);   // never a cell past the sheet
-                return sheet.Cols > 0 && sheet.Rows > 0 && sheet.Frames > 0 ? sheet : null;
             });
         }
 
@@ -316,7 +284,6 @@ namespace OmegaTube.Data
                     Views = Json.Str(o, "views"),
                     Published = Json.Str(o, "published"),
                     Thumbnail = Json.Str(o, "thumbnail"),
-                    Preview = Json.Str(o, "preview"),
                     Live = Json.Bool(o, "live"),
                     WatchedPercent = (int)Json.Num(o, "watched"),
                     PlaylistId = Json.Str(o, "playlistId"),
@@ -402,7 +369,6 @@ namespace OmegaTube.Data
             {
                 Live = Json.Bool(root, "live", false),
                 Title = Json.Str(root, "title"),
-                Author = Json.Str(root, "author"),
                 Description = Json.Str(root, "description"),
                 Views = Json.Str(root, "views"),
                 ChannelId = Json.Str(root, "channelId"),

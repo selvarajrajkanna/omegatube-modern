@@ -346,8 +346,7 @@ bool Fmp4Reader::parse_moof(std::span<const uint8_t> moof, uint64_t moof_start) 
             } else if (t == fourcc("tfdt")) {
                 uint8_t version = c.u8();
                 c.skip(3);
-                base_dts_ = version == 1 ? c.u64() : c.u32();
-                next_dts_ = base_dts_;
+                next_dts_ = version == 1 ? c.u64() : c.u32();
             } else if (t == fourcc("trun")) {
                 uint32_t vf = c.u32();
                 uint8_t version = uint8_t(vf >> 24);

@@ -68,8 +68,6 @@ public:
     bool seek(int64_t ms);
     bool set_rate(double rate);
     PlayerStats stats();
-    // 0 while preparing, 1 prepared, -1 prepare failed.
-    int prepare_result() const { return prepared_ ? 1 : (prepare_failed_ ? -1 : 0); }
     const std::string& error() const { return error_; }
     // start() failed because YouTube kept refusing a stream (403/410), not a network or codec issue.
     bool stream_refused() const { return stream_refused_; }

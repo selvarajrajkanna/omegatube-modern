@@ -26,26 +26,12 @@ namespace OmegaTube.Ui
             return label;
         }
 
-        // Bold text. Cosmetic: if this TizenFX lacks FontStyle, the call is JIT-compiled (and fails) inside the
-        // try, and the label stays regular.
         public static TextLabel Bold(TextLabel label)
-        {
-            try
-            {
-                SetBold(label);
-            }
-            catch (System.Exception e)
-            {
-                Tizen.Log.Warn("OmegaTube", "FontStyle: " + e.Message);
-            }
-            return label;
-        }
-
-        private static void SetBold(TextLabel label)
         {
             var style = new PropertyMap();
             style.Add("weight", new PropertyValue("bold"));
             label.FontStyle = style;
+            return label;
         }
 
         public static T Round<T>(T view, float radius) where T : View
@@ -55,12 +41,6 @@ namespace OmegaTube.Ui
                 view.CornerRadius = new Vector4(radius, radius, radius, radius);
             }
             return view;
-        }
-
-        public static void FillRounded(View v, Color color, float radius)
-        {
-            v.BackgroundColor = color;
-            Round(v, radius);
         }
 
         // A rounded image: the URL and the rounded-rect alpha mask are set together in one Image visual (setting
@@ -86,27 +66,12 @@ namespace OmegaTube.Ui
 
         // One instance per easing: animations are created on key presses, the curves need not be.
         public static readonly AlphaFunction EaseOut = new AlphaFunction(AlphaFunction.BuiltinFunctions.EaseOut);
-        public static readonly AlphaFunction EaseInOut = new AlphaFunction(AlphaFunction.BuiltinFunctions.EaseInOut);
-        public static readonly AlphaFunction Linear = new AlphaFunction(AlphaFunction.BuiltinFunctions.Linear);
 
         public static View Box(Color color, int width, int height)
         {
             return new View { BackgroundColor = color, Size = new Size(width, height) };
         }
 
-        // "Liquid glass" panel: a translucent, rounded fill. The Tizen 5.5 firmware has no backdrop-blur API, so
-        // this is translucent + rounded (you see through it) rather than a true frosted blur. Built from the white
-        // rounded nine-patch tinted by `fill` (keeps fixed corners at any size and rounds on 5.5, unlike
-        // CornerRadius). `fill` carries the translucency in its alpha.
-        public static ImageView Glass(Color fill, int width, int height)
-        {
-            return new ImageView { ResourceUrl = Theme.Image("round9.9"), Size = new Size(width, height), Color = fill };
-        }
-
-        // Baked glass nine-patch (tools/glass-panel/make_glass.py): translucent fill, bright rim and a soft top
-        // highlight, rounded at any size. `lit` is the brighter variant for the focused entry. Drawn untinted;
-        // tint it through Color (e.g. accent) when needed.
-        // `pill` uses the rounder variant (buttons, selected entries) instead of the card one.
         public static View Panel(Color flat, int width, int height, float radius)
         {
             return Rounded(flat, width, height, radius);
@@ -159,9 +124,8 @@ namespace OmegaTube.Ui
 
         public static View Rounded(Color color, int width, int height, float radius)
         {
-            var v = new View { Size = new Size(width, height) };
-            FillRounded(v, color, radius);
-            return v;
+            var v = new View { Size = new Size(width, height), BackgroundColor = color };
+            return Round(v, radius);
         }
 
         // On/off switch (settings rows). Update with SetSwitch.

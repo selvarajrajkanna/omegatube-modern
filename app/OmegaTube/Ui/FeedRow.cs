@@ -21,10 +21,6 @@ namespace OmegaTube.Ui
         public int Count => items.Count;
         public int FocusIndex { get; private set; }
         public VideoItem FocusedItem => items.Count > 0 ? items[FocusIndex] : null;
-        public Card FocusedCard => FocusIndex < cards.Count ? cards[FocusIndex] : null;
-
-        public List<VideoItem> ItemsAfterFocus(int count) =>
-            items.GetRange(Math.Min(FocusIndex + 1, items.Count), Math.Max(0, Math.Min(count, items.Count - FocusIndex - 1)));
         public VideoItem FirstItem => items.Count > 0 ? items[0] : null;
 
         // Asks UiWork to call BuildNext. A ShelfList replaces it to order the work of all its rows.
@@ -37,7 +33,6 @@ namespace OmegaTube.Ui
         private readonly List<VideoItem> items = new List<VideoItem>();
         private readonly List<Card> cards = new List<Card>();   // cards of items[0 .. cards.Count)
         private string continuation = "";
-        private string cacheKey;   // home rows: first page cached for an instant start-up
         private bool fresh;        // first network page received
         private bool loading;
         private bool focused;
@@ -86,19 +81,6 @@ namespace OmegaTube.Ui
         {
             UiWork.Cancel(pump);
             base.Dispose(type);
-        }
-
-        // Shows the cached first page now; the next Load() replaces it with the network one.
-        public void UseCache(string key)
-        {
-            cacheKey = key;
-            FeedPage cached = LocalStore.LoadFeed(key);
-            if (cached != null)
-            {
-                items.AddRange(cached.Items);
-                status.Text = "";
-                UpdateVisible();
-            }
         }
 
         // Items already fetched (a home shelf): no first request; the loader only gives the next pages.
@@ -194,13 +176,7 @@ namespace OmegaTube.Ui
             }
             if (!fresh)
             {
-                // First network page: replaces whatever the cache showed.
                 fresh = true;
-                if (cacheKey != null)
-                {
-                    string key = cacheKey;
-                    _ = Task.Run(() => LocalStore.SaveFeed(key, page));
-                }
                 ReplaceItems(page.Items);
             }
             else

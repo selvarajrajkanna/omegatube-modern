@@ -44,12 +44,6 @@ namespace OmegaTube.Util
             return rows;
         }
 
-        // Highest byte count that still fits in `version` (to size a payload).
-        public static int Capacity(int version, bool medium = false)
-        {
-            return DataCodewords(version, medium ? 1 : 0) - (version < 10 ? 2 : 3);
-        }
-
         private static bool[,] Build(byte[] data, int ecl)
         {
             int version = 1;

@@ -42,8 +42,6 @@ public:
     bool send(const Request& req);
     // Reads up to n body bytes (returns 0 at end of body or on error).
     size_t read_some(void* dst, size_t n);
-    // Reads exactly n body bytes unless the body ends first.
-    size_t read(void* dst, size_t n);
     std::string read_all(size_t limit = 64 * 1024 * 1024);
     void close();
 

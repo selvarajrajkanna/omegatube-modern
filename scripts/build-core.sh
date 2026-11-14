@@ -25,7 +25,7 @@ MAX_GLIBC="${OMEGA_MAX_GLIBC:-2.36}"
 NEWER=$(readelf --dyn-syms -W "$OUT/libomegacore.so" | grep -oE '@GLIBC_[0-9.]+' | sort -u | sed 's/@GLIBC_//' |
   while read -r v; do [ "$(printf '%s\n%s\n' "$v" "$MAX_GLIBC" | sort -V | tail -n1)" != "$MAX_GLIBC" ] && echo "$v"; done || true)
 if [ -n "$NEWER" ]; then
-  echo "libomegacore.so needs glibc newer than $MAX_GLIBC (Tizen 5.5 TVs cannot load it):" >&2
+  echo "libomegacore.so needs glibc newer than $MAX_GLIBC (target TVs cannot load it):" >&2
   readelf --dyn-syms -W "$OUT/libomegacore.so" | grep -E "@GLIBC_($(echo $NEWER | tr ' ' '|' | sed 's/\./\\./g'))" >&2
   exit 1
 fi

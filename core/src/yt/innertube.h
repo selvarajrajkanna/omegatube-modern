@@ -23,14 +23,13 @@ struct Format {
     int width = 0, height = 0, fps = 0;
     int64_t bitrate = 0;
     int64_t content_length = 0;
-    int audio_sample_rate = 0, audio_channels = 0;
+    int audio_sample_rate = 0;
     // Videos with several audio languages (dubbed): the same itags once per track.
     std::string audio_track_id;    // e.g. "fr.3", "en.4" (empty: single-track video)
     std::string audio_track_name;  // e.g. "Français (doublage)", "English (United States) original"
     bool audio_default = false;
     VideoCodec codec = VideoCodec::Unknown;
     HdrMode hdr_mode = HdrMode::None;
-    bool is_10bit = false;
     bool is_video() const { return mime.compare(0, 6, "video/") == 0; }
     bool is_audio() const { return mime.compare(0, 6, "audio/") == 0; }
     // "avc1", "vp9" or "av01" for the video codecs we can play, else "".
@@ -40,9 +39,6 @@ struct Format {
 // One entry of a feed (search results, channel videos...).
 struct FeedItem {
     std::string video_id, title, channel, duration, views, published, thumbnail;
-    // Animated preview (richThumbnail.movingThumbnailRenderer): an animated WebP shown on hover where YouTube
-    // offers one; empty otherwise.
-    std::string preview;
     // Playlists and mixes: playlist_id + the first video to play (video_id). Videos inside a playlist
     // (Client::playlist) keep kind "video" with the playlist_id they belong to.
     std::string playlist_id;

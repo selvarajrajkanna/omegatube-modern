@@ -61,16 +61,8 @@ void load() {
 }  // namespace
 
 const Api* api() {
-    // A plain mutex instead of std::call_once: call_once pulls in libstdc++'s thread_local
-    // __once_callable/__once_call, and that TLS can't be relocated by the custom in-memory loader used on
-    // Tizen 5.5 (issue #15). This runs once in practice (g_loaded is latched), so the lock cost is moot.
-    static std::mutex m;
-    std::lock_guard<std::mutex> lock(m);
-    static bool tried = false;
-    if (!tried) {
-        tried = true;
-        load();
-    }
+    static std::once_flag once;
+    std::call_once(once, load);
     return g_loaded;
 }
 

@@ -16,7 +16,7 @@ namespace OmegaTube.Ui
 
         private readonly Func<bool> ready;
         private readonly ImageView play;
-        private readonly long start = Environment.TickCount;
+        private readonly long start = Environment.TickCount64;
         private View spinner;
         private Animation pop, spin, pulse, fade;   // fields: a collected Animation never finishes
         private Timer poll;
@@ -71,7 +71,7 @@ namespace OmegaTube.Ui
 
         private bool Check()
         {
-            long elapsed = Environment.TickCount - start;
+            long elapsed = Environment.TickCount64 - start;
             if (elapsed >= MaxMs || (elapsed >= MinMs && ready()))
             {
                 poll = null;

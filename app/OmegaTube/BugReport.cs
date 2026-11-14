@@ -75,39 +75,32 @@ namespace OmegaTube
             if (e is DllNotFoundException || e is BadImageFormatException)
             {
                 // The loader's own reason right after the message: the issue URL keeps a crash's first lines.
-                // NativeCore.LoadRoute says which route was tried (file path / memfd), key for Tizen 5.5 (#15).
                 return $"{time} {e.GetType()}: {e.Message}\ncore load route: {NativeCore.LoadRoute}\n{CoreLoadError()}\n{e.StackTrace}";
             }
             return $"{time} {(e != null ? e.ToString() : "unknown error")}";
         }
 
-        [DllImport("libdl.so.2", EntryPoint = "dlopen")]
-        private static extern IntPtr DlOpen(string file, int mode);
-
-        [DllImport("libdl.so.2", EntryPoint = "dlerror")]
-        private static extern IntPtr DlError();
-
-        // .NET Core 3.0 (Tizen 5.5) only reports the last name it probed ("libomegacore: No such file"), which
-        // hides the real cause (missing glibc symbol, wrong ABI...): ask the dynamic loader directly.
+        // Probe libomegacore.so via .NET 8 NativeLibrary so any missing dependency/ABI mismatch shows verbatim.
         public static string CoreLoadError()
         {
             try
             {
-                string path = Path.GetFullPath(Path.Combine(Tizen.Applications.Application.Current.DirectoryInfo.Resource, "..", "lib", "libomegacore.so"));
+                string path = NativeCore.CorePath();
                 if (!File.Exists(path))
                 {
-                    return "dlopen: " + path + " is missing";
+                    return "native load: " + path + " is missing";
                 }
-                const int RtldNow = 2;
-                if (DlOpen(path, RtldNow) != IntPtr.Zero)
+                if (NativeLibrary.TryLoad(path, out IntPtr handle))
                 {
-                    return "dlopen: " + path + " loads fine";
+                    NativeLibrary.Free(handle);
+                    return "native load: " + path + " loads fine";
                 }
-                return "dlopen: " + (Marshal.PtrToStringAnsi(DlError()) ?? "unknown error");
+                NativeLibrary.Load(path);
+                return "native load: unknown error";
             }
             catch (Exception e)
             {
-                return "dlopen check failed: " + e.Message;
+                return "native load: " + e.Message;
             }
         }
 
@@ -134,6 +127,8 @@ namespace OmegaTube
 
         public static string TizenVersion => Info("http://tizen.org/feature/platform.version");
 
+        public static string FirmwareVersion => Info("http://tizen.org/system/build.string");
+
         public static string Model => Info("http://tizen.org/system/model_name");
 
         // One "key: value" line per item, for the issue's "device" field and the full log's header.
@@ -144,7 +139,7 @@ namespace OmegaTube
                 "OmegaTube: " + AppVersion,
                 "Model: " + Model,
                 "Tizen: " + TizenVersion,
-                "Firmware: " + Info("http://tizen.org/system/build.string"),
+                "Firmware: " + FirmwareVersion,
                 "CPU: " + Info("http://tizen.org/feature/platform.core.cpu.arch")
                     + ", process " + RuntimeInformation.ProcessArchitecture + ", OS " + RuntimeInformation.OSArchitecture,
                 ".NET: " + Environment.Version,

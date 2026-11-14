@@ -20,9 +20,6 @@ namespace OmegaTube.Ui
 
         public int Count => rows.Count;
         public VideoItem FocusedItem => rows.Count > 0 ? rows[focus].FocusedItem : null;
-        public int FocusedRow => focus;
-        public View FocusedCardView => rows.Count > 0 ? rows[focus].FocusedCard : null;
-        public List<VideoItem> ItemsAfterFocus(int count) => rows.Count > 0 ? rows[focus].ItemsAfterFocus(count) : new List<VideoItem>();
 
         private readonly int width;
         private readonly int leftInset;
