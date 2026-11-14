@@ -212,11 +212,11 @@ namespace OmegaTube.Ui
             under.PositionY = 1080;
             chrome.Add(under);
 
-            titleLabel = Widgets.Label("  " + item.Title + "  ", Theme.TitleSize - 6, Theme.Text, 0, 40);
-            titleLabel.MaximumSize = new Size2D(ProgressWidth, 44);
+            titleLabel = Widgets.Label("", Theme.TitleSize - 6, Theme.Text, ProgressWidth, 40);
             titleLabel.BackgroundColor = new Color(0f, 0f, 0f, 0.55f);
             Widgets.Round(titleLabel, 8);
             titleLabel.Position = new Position(ProgressX, TitleY);
+            SetTitle(item.Title);
             chrome.Add(titleLabel);
             metaLabel = Widgets.Label(MetaLine(), Theme.SmallSize + 1, new Color(0.85f, 0.85f, 0.85f, 1f), 1600, 30);
             metaLabel.Position = new Position(ProgressX, MetaY);
@@ -434,7 +434,7 @@ namespace OmegaTube.Ui
             live = info.Live;
             if (item.IsList && info.Title.Length > 0)
             {
-                titleLabel.Text = "  " + info.Title + "  ";   // the card showed the list's name
+                SetTitle(info.Title);   // the card showed the list's name
             }
             metaLabel.Text = MetaLine();
             section.SetDescription(MetaLine(), info.Description);
@@ -590,6 +590,13 @@ namespace OmegaTube.Ui
         }
 
         // ---------------------------------------------------------------- actions row (channel, subscribe, like)
+
+        private void SetTitle(string title)
+        {
+            title = title ?? "";
+            titleLabel.Text = "  " + title + "  ";
+            titleLabel.SizeWidth = Math.Min(ProgressWidth, Math.Max(120, (int)(title.Length * (Theme.TitleSize - 6) * 0.56f) + 44));
+        }
 
         private Chip AddChip(Social kind, string icon, string text)
         {

@@ -61,6 +61,13 @@ std::string text_of(const json& j) {
     return out;
 }
 
+std::string trimmed(std::string s) {
+    size_t a = s.find_first_not_of(" \t\n\xC2\xA0");
+    if (a == std::string::npos) return "";
+    size_t b = s.find_last_not_of(" \t\n");
+    return s.substr(a, b - a + 1);
+}
+
 // First value of `key` anywhere under j (depth-first), or nullptr.
 const json* find_key(const json& j, const char* key) {
     if (j.is_object()) {
@@ -852,8 +859,9 @@ bool Client::details(const std::string& video_id, const std::string& access_toke
     if (out.channel_avatar.compare(0, 2, "//") == 0) out.channel_avatar = "https:" + out.channel_avatar;
     if (const json* lb = find_key(r, "likeButtonViewModel")) {
         if (const json* def = find_key(*lb, "defaultButtonViewModel")) {
-            if (const json* vm = find_key(*def, "buttonViewModel"))
-                out.like_count = trimmed(vm->value("title", ""));
+            if (const json* vm = find_key(*def, "buttonViewModel");
+                vm && vm->contains("title") && (*vm)["title"].is_string())
+                out.like_count = trimmed((*vm)["title"].get<std::string>());
         }
         if (out.like_count.empty()) {
             if (const json* ent = find_key(*lb, "likeCountEntity")) {
@@ -943,13 +951,6 @@ bool Client::channel(const std::string& channel_id, const std::string& continuat
 }
 
 namespace {
-
-std::string trimmed(std::string s) {
-    size_t a = s.find_first_not_of(" \t\n ");
-    if (a == std::string::npos) return "";
-    size_t b = s.find_last_not_of(" \t\n");
-    return s.substr(a, b - a + 1);
-}
 
 std::string string_at(const json& j, std::initializer_list<const char*> path) {
     const json* at = &j;
