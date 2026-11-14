@@ -286,6 +286,10 @@ namespace OmegaTube
                 return;
             }
             string key = e.Key.KeyPressedName;
+            if (e.Key.KeyCode == 65376 && string.IsNullOrEmpty(key))
+            {
+                key = "Done";
+            }
             UiWork.KeyPressed();   // deferred card filling yields to navigation
             if (dialog != null)
             {

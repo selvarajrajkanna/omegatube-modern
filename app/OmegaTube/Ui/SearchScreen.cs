@@ -44,6 +44,7 @@ namespace OmegaTube.Ui
         private const int CharRows = 4, ActionRow = 4, ActionKeys = 5;
         private const int KeyW = 86, KeyH = 72, KeyGap = 8;
         private const int KbX = 80, KbY = 190;
+        private const int ImeDoneKeyCode = 65376;
 
         private enum Zone { Input, Keyboard, Suggestions, AddButton, Results }
 
@@ -57,6 +58,7 @@ namespace OmegaTube.Ui
         private FeedRow results;
         private string query = "";
         private bool syncingField;
+        private long imeSubmitTick;
         private Zone zone = Zone.Keyboard;
         private int keyRow = 1, keyCol;
         private int suggestionIndex;
@@ -90,9 +92,18 @@ namespace OmegaTube.Ui
                 {
                     return;
                 }
-                query = queryField.Text ?? "";
+                string text = queryField.Text ?? "";
+                bool submittedNewline = zone == Zone.Input && (text.IndexOf('\r') >= 0 || text.IndexOf('\n') >= 0);
+                query = text.Replace("\r", "").Replace("\n", "");
+                if (submittedNewline)
+                {
+                    SyncField();
+                    SubmitInput();
+                    return;
+                }
                 UiGuard.Fire("SearchScreen.RefreshSuggestions", RefreshSuggestions);
             };
+            queryField.KeyEvent += OnFieldKey;
             inputBox.Add(queryField);
 
             addButton = Widgets.Label("  + " + T("Add to menu") + "  ", Theme.BodySize, Theme.Text, 0, 0);
@@ -202,16 +213,81 @@ namespace OmegaTube.Ui
             results?.SetFocused(zone == Zone.Results);
         }
 
+        public override void OnShow()
+        {
+            FocusManager.Instance.FocusedViewEnterKey += OnFocusedViewEnterKey;
+        }
+
         public override void OnHide()
         {
+            FocusManager.Instance.FocusedViewEnterKey -= OnFocusedViewEnterKey;
             if (FocusManager.Instance.GetCurrentFocusView() == queryField)
             {
                 FocusManager.Instance.ClearFocus();
             }
         }
 
+        private static bool IsSubmitKey(string key) =>
+            key == "Return" || key == "Enter" || key == "KP_Enter" || key == "KeypadEnter"
+            || key == "Select" || key == "Done" || key == "XF86Done";
+
+        private bool OnFieldKey(object sender, View.KeyEventArgs e)
+        {
+            if (zone != Zone.Input)
+            {
+                return false;
+            }
+            bool isDoneCode = e.Key.KeyCode == ImeDoneKeyCode;
+            if (e.Key.State != Key.StateType.Down && !(isDoneCode && e.Key.State == Key.StateType.Up))
+            {
+                return false;
+            }
+            if (!isDoneCode && !IsSubmitKey(e.Key.KeyPressedName))
+            {
+                return false;
+            }
+            UiGuard.Run("SearchScreen.FieldKey", SubmitInput);
+            return true;
+        }
+
+        private void OnFocusedViewEnterKey(object sender, FocusManager.FocusedViewActivatedEventArgs e)
+        {
+            if (zone == Zone.Input && e.View == queryField)
+            {
+                UiGuard.Run("SearchScreen.FocusedEnter", SubmitInput);
+            }
+        }
+
+        private void SubmitInput()
+        {
+            if (System.Environment.TickCount64 - imeSubmitTick < 150)
+            {
+                return;
+            }
+            imeSubmitTick = System.Environment.TickCount64;
+            string fieldText = (queryField.Text ?? "").Replace("\r", "").Replace("\n", "");
+            if (fieldText.Length > 0)
+            {
+                query = fieldText;
+            }
+            if (query.Trim().Length > 0)
+            {
+                RunSearch();
+                UpdateFocus();
+            }
+            else
+            {
+                FocusManager.Instance.ClearFocus();
+                FocusManager.Instance.SetCurrentFocusView(queryField);
+            }
+        }
+
         public override bool OnKey(string key)
         {
+            if (IsSubmitKey(key) && System.Environment.TickCount64 - imeSubmitTick < 150)
+            {
+                return true;
+            }
             switch (zone)
             {
                 case Zone.Input:
@@ -238,17 +314,9 @@ namespace OmegaTube.Ui
                         UpdateFocus();
                         return false;
                     }
-                    else if (key == "Return")
+                    else if (IsSubmitKey(key))
                     {
-                        if (query.Trim().Length > 0)
-                        {
-                            RunSearch();
-                        }
-                        else
-                        {
-                            FocusManager.Instance.ClearFocus();
-                            FocusManager.Instance.SetCurrentFocusView(queryField);
-                        }
+                        SubmitInput();
                     }
                     break;
                 case Zone.Keyboard:
