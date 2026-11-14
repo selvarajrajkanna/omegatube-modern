@@ -33,7 +33,7 @@ namespace OmegaTube.Ui
         private static double sessionSpeed = 1.0;
         private static string loopVideoId;   // loop survives the player restart that replays the video
 
-        private enum Focus { Hidden, Actions, Timeline, Buttons, Playlist, Suggestions, Section, Panel, Comments, UpNext }
+        private enum Focus { Hidden, Actions, Timeline, Buttons, Playlist, Suggestions, Panel, Comments, UpNext }
         private enum Social { Channel, Subscribe, Like }
 
         // A pill of the actions row: icon or avatar, then text; sized from its text.
@@ -45,7 +45,7 @@ namespace OmegaTube.Ui
             public TextLabel Label;
             public bool Active;      // subscribed / liked / disliked
         }
-        private enum Action { Restart, PlayPause, Next, Comments, Skip, Captions, Audio, Speed, Quality, Loop, Stats }
+        private enum Action { Restart, PlayPause, Next, Comments, Description, Skip, Captions, Audio, Speed, Quality, Loop, Stats }
 
         private class Button
         {
@@ -72,8 +72,6 @@ namespace OmegaTube.Ui
         private const int TrackY = 928, ButtonsY = 970, ButtonSize = 46;
         private const int SuggestionsY = 1080 + 30;   // the suggestions row, below the screen until revealed
         private const int ChromeLift = 30 + Theme.RowHeight + 40;   // how far the block slides up to show it whole
-        private int SectionY => SuggestionsY + (InList ? 2 : 1) * Theme.RowHeight;  // description + comments, below the rows
-        private const int SectionScreenY = 90;                       // where its top shows when it has the focus
         private const int CaptionBottomFree = 1010, CaptionBottomChrome = 780;
         private const int UpNextSeconds = 10;
 
@@ -97,7 +95,6 @@ namespace OmegaTube.Ui
         private bool signedIn;
         private bool socialBusy;
         private FeedRow playlistRow, suggestions;
-        private readonly WatchSection section;
         private readonly CommentsPanel commentsPanel;
         private Focus focus = Focus.Hidden;
         private int buttonIndex;
@@ -233,17 +230,6 @@ namespace OmegaTube.Ui
             AddChip(Social.Subscribe, null, T("Subscribe")).View.Hide();
             AddChip(Social.Like, "thumb_up", T("Like")).View.Hide();
             LayoutChips();
-            section = new WatchSection(item.Id, Root) { Position = new Position(40 + Theme.FocusMargin, SectionY) };
-            section.Toast = text => Toast(text);
-            section.ScrollChanged = () =>
-            {
-                if (focus == Focus.Section)
-                {
-                    ShowChrome(Focus.Hidden);
-                }
-            };
-            section.SetDescription(MetaLine(), "");
-            chrome.Add(section);
             clockLabel = Widgets.Label("", Theme.SmallSize + 2, Theme.Text, 104, 38);
             clockLabel.BackgroundColor = M3Surface;
             Widgets.Round(clockLabel, 19);
@@ -272,7 +258,8 @@ namespace OmegaTube.Ui
             AddButton(Action.Restart, "restart", ref x);
             playButton = AddButton(Action.PlayPause, "pause", ref x);
             AddButton(Action.Next, "skip_next", ref x);
-            AddButton(Action.Comments, "view_list", ref x);
+            AddButton(Action.Comments, "chat", ref x);
+            AddButton(Action.Description, "info_outline", ref x);
             // Right group, right to left.
             AddRightButton(Action.Stats, "stats");
             AddRightButton(Action.Loop, "repeat");
@@ -450,7 +437,10 @@ namespace OmegaTube.Ui
                 SetTitle(info.Title);   // the card showed the list's name
             }
             SetMeta(MetaLine());
-            section.SetDescription(MetaLine(), info.Description);
+            if (focus == Focus.Comments)
+            {
+                NativeCore.PlayerSetDisplayRect(player, 0, 0, 1920 - CommentsPanel.PanelWidth, 1080);
+            }
             if (details != null && details.ChannelId.Length == 0 && info.ChannelId.Length > 0)
             {
                 details.ChannelId = info.ChannelId;   // the details answered first, without it
@@ -663,10 +653,12 @@ namespace OmegaTube.Ui
                     continue;
                 }
                 string text = c.Label.Text ?? "";
-                int width = (int)c.Label.PositionX + Math.Max(28, (int)(text.Length * (Theme.SmallSize - 1) * 0.53f)) + 16;
+                int textW = Math.Max(48, (int)Math.Ceiling(text.Length * (Theme.SmallSize - 1) * 0.66f) + 12);
+                int width = (int)c.Label.PositionX + textW + 14;
                 width = Math.Min(c.Kind == Social.Channel ? 380 : 240, width);
                 c.View.SizeWidth = width;
-                c.Label.SizeWidth = width - c.Label.PositionX - 12;
+                c.Label.Ellipsis = c.Kind == Social.Channel;
+                c.Label.SizeWidth = width - c.Label.PositionX - 10;
                 c.View.PositionX = x;
                 x += width + 10;
             }
@@ -721,7 +713,10 @@ namespace OmegaTube.Ui
                 d.ChannelId = info.ChannelId ?? "";   // videoDetails.channelId from the player answer
             }
             SetMeta(MetaLine());
-            section.SetDescription(MetaLine(), info.Description);
+            if (focus == Focus.Comments)
+            {
+                NativeCore.PlayerSetDisplayRect(player, 0, 0, 1920 - CommentsPanel.PanelWidth, 1080);
+            }
             Chip channel = ChipOf(Social.Channel);
             if (d.Channel.Length > 0)
             {
@@ -901,7 +896,6 @@ namespace OmegaTube.Ui
                 return;
             }
             closing = true;
-            section.Close();
             commentsPanel.Close();
             tick?.Stop();
             captionTick?.Stop();
@@ -1134,7 +1128,7 @@ namespace OmegaTube.Ui
         private void OnEnded()
         {
             captionLabel.Hide();
-            if (section.EntryOpen)
+            if (commentsPanel.EntryOpen)
             {
                 return;   // writing a comment: stays on the finished video
             }
@@ -1299,7 +1293,7 @@ namespace OmegaTube.Ui
         // The lines active at the playback position (speech-recognition tracks overlap: keep the last two).
         private void UpdateCaption()
         {
-            if (cues == null || player == IntPtr.Zero || ended || focus == Focus.Section)
+            if (cues == null || player == IntPtr.Zero || ended)
             {
                 if (captionLabel.Visibility)
                 {
@@ -1487,14 +1481,9 @@ namespace OmegaTube.Ui
             {
                 focus = target;
             }
-            if (focus == Focus.Playlist || focus == Focus.Suggestions || focus == Focus.Section)
-            {
-                section.Begin();   // the comments load once the user heads down there
-            }
-            section.SetFocused(focus == Focus.Section);
             float lift = focus == Focus.Playlist ? -ChromeLift
                        : focus == Focus.Suggestions ? -(ChromeLift + (InList ? Theme.RowHeight : 0))
-                       : focus == Focus.Section ? -(SectionY - SectionScreenY) - section.Scroll : 0;
+                       : 0;
             slide = Widgets.Slide(chrome, 0, lift, slide, 220);
             RefreshButtons();
             playlistRow?.SetFocused(focus == Focus.Playlist);
@@ -1516,7 +1505,6 @@ namespace OmegaTube.Ui
             tooltip.Hide();
             playlistRow?.SetFocused(false);
             suggestions?.SetFocused(false);
-            section.SetFocused(false);
             SyncSkipPill();
         }
 
@@ -1561,6 +1549,7 @@ namespace OmegaTube.Ui
                 Action.PlayPause => stats.State == 4 || ended ? T("Play") : T("Pause"),
                 Action.Next => InList ? T("Next in the list") : T("Next video"),
                 Action.Comments => T("Comments"),
+                Action.Description => T("Description"),
                 Action.Captions => T("Subtitles: {0}", captions != null ? CaptionName(captions) : T("off")),
                 Action.Audio => T("Audio track: {0}", AudioName(info.AudioTrack)),
                 Action.Speed => T("Speed: {0}", SpeedLabel(sessionSpeed)),
@@ -1652,7 +1641,11 @@ namespace OmegaTube.Ui
                     {
                         Focus target = playlistRow != null && playlistRow.Count > 0 ? Focus.Playlist
                                      : suggestions != null && suggestions.Count > 0 ? Focus.Suggestions
-                                     : Focus.Section;
+                                     : Focus.Buttons;
+                        if (target == Focus.Buttons)
+                        {
+                            buttonIndex = buttons.IndexOf(playButton);
+                        }
                         ShowChrome(target);
                     }
                     else
@@ -1747,9 +1740,14 @@ namespace OmegaTube.Ui
                             }
                             break;
                         case "Down":
-                            focus = playlistRow != null && playlistRow.Count > 0 ? Focus.Playlist
-                                  : suggestions != null && suggestions.Count > 0 ? Focus.Suggestions
-                                  : Focus.Section;
+                            if (playlistRow != null && playlistRow.Count > 0)
+                            {
+                                focus = Focus.Playlist;
+                            }
+                            else if (suggestions != null && suggestions.Count > 0)
+                            {
+                                focus = Focus.Suggestions;
+                            }
                             break;
                         case "Up":
                             focus = live ? Focus.Actions : Focus.Timeline;
@@ -1782,7 +1780,10 @@ namespace OmegaTube.Ui
                             }
                             return true;
                         case "Down":
-                            focus = suggestions != null && suggestions.Count > 0 ? Focus.Suggestions : Focus.Section;
+                            if (suggestions != null && suggestions.Count > 0)
+                            {
+                                focus = Focus.Suggestions;
+                            }
                             break;
                         case "Up":
                         case "XF86Back":
@@ -1808,9 +1809,6 @@ namespace OmegaTube.Ui
                                 App.Replace(new PlayerScreen(App, suggestions.FocusedItem));
                             }
                             return true;
-                        case "Down":
-                            focus = Focus.Section;
-                            break;
                         case "Up":
                             focus = playlistRow != null && playlistRow.Count > 0 ? Focus.Playlist : Focus.Buttons;
                             break;
@@ -1818,24 +1816,6 @@ namespace OmegaTube.Ui
                         case "Escape":
                             focus = Focus.Buttons;
                             break;
-                    }
-                    ShowChrome(Focus.Hidden);
-                    return true;
-
-                case Focus.Section:
-                    if (!section.Key(key))
-                    {
-                        // Up from the description: back to the suggestions/playlist; Back: to the controls.
-                        if (key == "Up")
-                        {
-                            focus = suggestions != null && suggestions.Count > 0 ? Focus.Suggestions
-                                  : playlistRow != null && playlistRow.Count > 0 ? Focus.Playlist
-                                  : Focus.Buttons;
-                        }
-                        else
-                        {
-                            focus = Focus.Buttons;
-                        }
                     }
                     ShowChrome(Focus.Hidden);
                     return true;
@@ -1892,6 +1872,9 @@ namespace OmegaTube.Ui
                     break;
                 case Action.Comments:
                     OpenCommentsSplit();
+                    break;
+                case Action.Description:
+                    OpenDescriptionSplit();
                     break;
                 case Action.Skip:
                     if (offered != null)
@@ -2281,7 +2264,16 @@ namespace OmegaTube.Ui
             HideChrome();
             focus = Focus.Comments;
             commentsPanel.Open();
-            SetVideoViewport(CommentsPanel.PanelWidth, 0, 1920 - CommentsPanel.PanelWidth, 1080);
+            SetVideoViewport(0, 0, 1920 - CommentsPanel.PanelWidth, 1080);
+        }
+
+        private void OpenDescriptionSplit()
+        {
+            HideChrome();
+            focus = Focus.Comments;
+            string title = item.IsList && info.Title.Length > 0 ? info.Title : item.Title;
+            commentsPanel.OpenDescription(title, MetaLine(), info.Description);
+            SetVideoViewport(0, 0, 1920 - CommentsPanel.PanelWidth, 1080);
         }
 
         private void CloseCommentsSplit()
@@ -2307,7 +2299,7 @@ namespace OmegaTube.Ui
         {
             if (focus == Focus.Comments)
             {
-                LayoutBars(CommentsPanel.PanelWidth, 0, 1920 - CommentsPanel.PanelWidth, 1080);
+                LayoutBars(0, 0, 1920 - CommentsPanel.PanelWidth, 1080);
             }
             else
             {

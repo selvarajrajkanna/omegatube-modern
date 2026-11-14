@@ -31,6 +31,7 @@ namespace OmegaTube.Ui
         private const float MetaFont = Theme.SmallSize - 2;   // 17f
         private const float LineFactor = 1.32f;
 
+        private enum Mode { Comments, Description }
         private enum Part { Sort, Form, Comment }
         private enum Tool { Like, Dislike, Reply, Replies }
 
@@ -70,8 +71,13 @@ namespace OmegaTube.Ui
         private readonly ImageView formAvatar;
         private readonly TextLabel formLabel;
         private readonly View list;
+        private readonly View descView;
+        private readonly TextLabel descTitleLabel, descMetaLabel, descBodyLabel;
         private readonly List<Entry> entries = new List<Entry>();
 
+        private Mode mode = Mode.Comments;
+        private string commentsTitle = T("Comments");
+        private float descHeight;
         private float scrollY;
         private Animation scrollAnim;
         private float formTop, statusTop, listTop, total;
@@ -97,15 +103,15 @@ namespace OmegaTube.Ui
             this.videoId = videoId;
             this.overlayHost = overlayHost;
             Size = new Size(PanelWidth, PanelHeight);
-            Position = new Position(0, 0);
+            Position = new Position(1920 - PanelWidth, 0);
             BackgroundColor = new Color(0.08f, 0.08f, 0.10f, 0.96f);
 
-            // Right border separating comments (30%) from video (70%).
+            // Left border separating video (70%) from side panel (30%).
             Add(new View
             {
                 BackgroundColor = Theme.PanelLine,
                 Size = new Size(1, PanelHeight),
-                Position = new Position(PanelWidth - 1, 0),
+                Position = new Position(0, 0),
             });
 
             header = new View { Size = new Size(PanelWidth, HeaderH), Position = new Position(0, 0) };
@@ -162,6 +168,22 @@ namespace OmegaTube.Ui
             list = new View { Size = new Size(ContentWidth, 10), PositionX = Pad };
             content.Add(list);
 
+            descView = new View { Size = new Size(ContentWidth, 10), Position = new Position(Pad, 12) };
+            descTitleLabel = Widgets.Bold(Widgets.Label("", BodyFont + 2, Theme.Text, ContentWidth, 10));
+            descTitleLabel.MultiLine = true;
+            descTitleLabel.Ellipsis = false;
+            descTitleLabel.VerticalAlignment = VerticalAlignment.Top;
+            descView.Add(descTitleLabel);
+            descMetaLabel = Widgets.Label("", MetaFont, Theme.TextDim, ContentWidth, 28);
+            descView.Add(descMetaLabel);
+            descBodyLabel = Widgets.Label("", BodyFont, Theme.Text, ContentWidth, 10);
+            descBodyLabel.MultiLine = true;
+            descBodyLabel.Ellipsis = false;
+            descBodyLabel.VerticalAlignment = VerticalAlignment.Top;
+            descView.Add(descBodyLabel);
+            descView.Hide();
+            content.Add(descView);
+
             UpdateSortLabel();
             ArrangeParts();
             Hide();
@@ -169,13 +191,69 @@ namespace OmegaTube.Ui
 
         public void Open()
         {
+            mode = Mode.Comments;
+            countLabel.Text = commentsTitle;
+            descView.Hide();
+            list.Show();
+            Widgets.SetVisible(sortButton, !disabled && (sortTop.Length > 0 || sortNewest.Length > 0));
+            UpdateForm();
             Show();
             Begin();
             focusIndex = 0;
             toolIndex = -1;
             scrollY = 0;
             content.PositionY = 0;
+            ArrangeParts();
             Refresh();
+        }
+
+        public void OpenDescription(string videoTitle, string metaLine, string description)
+        {
+            CloseEntry();
+            mode = Mode.Description;
+            countLabel.Text = T("Description");
+            sortButton.Hide();
+            form.Hide();
+            status.Hide();
+            list.Hide();
+            descView.Show();
+
+            int titleChars = CharsPerLine(ContentWidth, BodyFont + 2);
+            List<string> titleLines = WrapLines(videoTitle ?? "", titleChars);
+            descTitleLabel.Text = string.Join("\n", titleLines);
+            float titleH = Math.Max(1, titleLines.Count) * (BodyFont + 2) * LineFactor + 6;
+            descTitleLabel.SizeHeight = titleH;
+            descTitleLabel.PositionY = 0;
+
+            float y = titleH + 8;
+            if (!string.IsNullOrEmpty(metaLine))
+            {
+                descMetaLabel.Text = metaLine;
+                descMetaLabel.PositionY = y;
+                descMetaLabel.Show();
+                y += 36;
+            }
+            else
+            {
+                descMetaLabel.Hide();
+            }
+
+            string bodyText = !string.IsNullOrWhiteSpace(description) ? description.Trim() : T("No description.");
+            int bodyChars = CharsPerLine(ContentWidth, BodyFont);
+            List<string> bodyLines = WrapLines(bodyText, bodyChars);
+            descBodyLabel.Text = string.Join("\n", bodyLines);
+            descBodyLabel.TextColor = !string.IsNullOrWhiteSpace(description) ? Theme.Text : Theme.TextDim;
+            float bodyH = Math.Max(1, bodyLines.Count) * BodyFont * LineFactor + 12;
+            descBodyLabel.SizeHeight = bodyH;
+            descBodyLabel.PositionY = y;
+
+            descHeight = y + bodyH + 24;
+            descView.SizeHeight = descHeight;
+            total = descHeight + 24;
+            content.SizeHeight = Math.Max(ViewportHeight, total);
+            scrollY = 0;
+            content.PositionY = 0;
+            Show();
         }
 
         public void ClosePanel()
@@ -254,12 +332,16 @@ namespace OmegaTube.Ui
             }
             if (page.Count.Length > 0)
             {
-                countLabel.Text = T("{0} comments", page.Count);
+                commentsTitle = T("{0} comments", page.Count);
+                if (mode == Mode.Comments)
+                {
+                    countLabel.Text = commentsTitle;
+                }
             }
             if (page.SortTop.Length > 0) sortTop = page.SortTop;
             if (page.SortNewest.Length > 0) sortNewest = page.SortNewest;
             if (page.CreateParams.Length > 0) createParams = page.CreateParams;
-            Widgets.SetVisible(sortButton, sortTop.Length > 0 || sortNewest.Length > 0);
+            Widgets.SetVisible(sortButton, mode == Mode.Comments && (sortTop.Length > 0 || sortNewest.Length > 0));
             continuation = page.Continuation;
             foreach (Comment c in page.Items)
             {
@@ -634,6 +716,20 @@ namespace OmegaTube.Ui
             if (key == "XF86Back" || key == "Escape")
             {
                 return false;
+            }
+            if (mode == Mode.Description)
+            {
+                if (key == "Down" && scrollY < MaxScroll)
+                {
+                    scrollY = Math.Min(MaxScroll, scrollY + 260);
+                    scrollAnim = Widgets.Slide(content, 0, -scrollY, scrollAnim, 160);
+                }
+                else if (key == "Up" && scrollY > 0)
+                {
+                    scrollY = Math.Max(0, scrollY - 260);
+                    scrollAnim = Widgets.Slide(content, 0, -scrollY, scrollAnim, 160);
+                }
+                return true;
             }
             (float top, float bottom) = Bounds(focusIndex);
             switch (key)
