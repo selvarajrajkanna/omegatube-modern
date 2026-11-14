@@ -8,9 +8,9 @@
 <h1 align="center">OmegaTube</h1>
 
 <p align="center">
-  A native YouTube client for Samsung smart TVs (Tizen) with SponsorBlock built in<br>
-  and its <b>own video player</b> for smooth 4K playback.<br>
-  <sub>Independent project, not affiliated with Google, YouTube or Samsung.</sub>
+  A native YouTube client for Samsung smart TVs (Tizen 10) with SponsorBlock built in<br>
+  and its <b>own video player</b> for smooth 4K 10-bit HDR playback.<br>
+  <sub>Started as a fork of <a href="https://github.com/IIyn/omegatube">IIyn/omegatube</a>, optimized for Tizen 10 &amp; .NET 8 without legacy Tizen compatibility workarounds. Independent project, not affiliated with Google, YouTube or Samsung.</sub>
 </p>
 
 ---
@@ -33,15 +33,16 @@
 
 - **No interruptions.** The app's own player reads the video streams directly, so playback runs uninterrupted.
 - **SponsorBlock**: skips sponsors, intros, reminders to subscribe and more, one setting per category (auto skip, skip button or off).
-- **Native playback**: up to **4K / 1440p (VP9)** and 1080p60 (H.264), with a choice of codec. AV1 is experimental.
+- **Native playback**: up to **4K / 1440p (VP9)**, **10-bit HDR (HDR10 / HLG)**, and 1080p60 (H.264), with a choice of codec. AV1 is supported where the TV hardware allows.
+- **Hardware-aware quality picker**: filters player quality options to resolutions supported by the TV panel.
 - **Your Google account**: sign in with a QR code. You get your home feed, subscriptions, history, likes and subscriptions, and your watch progress is kept in sync with your other devices.
 - **Live streams, playlists and mixes**, with a "play next" countdown.
 - **Subtitles**: auto-translated captions, adjustable size and background.
-- **Audio tracks** for multi-language videos, playback speed and loop.
-- **Dislike counts**, from [Return YouTube Dislike](https://returnyoutubedislike.com).
-- **A remote-friendly interface** that follows SmartTube's layout, with a customisable side menu.
-- **Two home interfaces** (Settings → General → Interface): **Omega**, the classic one, and **Glorious**, an immersive one: the focused video's artwork fills the screen, the menu folds into a pill, cards have glass styling, and resting on a card plays a muted video preview (first row) or an animated preview (the other rows). Both previews can be switched off in Settings.
-- **Languages**: English, French, Spanish.
+- **Audio tracks** for multi-language videos, playback speed (with reverse-logarithmic seek acceleration) and loop.
+- **TV voice & IME search**: native `TextField` integration with the TV's system virtual keyboard and voice dictation.
+- **Stats for nerds**: live playback buffer/stall metrics, CPU & memory usage, Tizen OS version, TV firmware build, and app version.
+- **A remote-friendly interface** in the **Omega** layout, with a customisable side menu.
+- **Languages**: English, French, Spanish (keyboard layout defaults to English India).
 
 ## Why OmegaTube?
 
@@ -75,10 +76,10 @@ OmegaTube is a ground-up rewrite. It does not use YouTube's web app or the brows
 
 ### The two halves
 
-| Part | Language | Role |
+| Part | Toolkit / Language | Role |
 | --- | --- | --- |
-| `app/OmegaTube` | C# (.NET, TizenFX API 8, NUI) | The interface: screens, focus and remote control handling, settings, translations, local data (history, settings). It packages everything into a `.tpk`. |
-| `core` | C++17 | Everything else: HTTPS, YouTube's API, sign-in, the MP4/WebM demuxers, the player that drives the hardware decoders, SponsorBlock. It is built as `libomegacore.so` and exposes a small C API (`core/include/omega/core.h`). |
+| `app/OmegaTube` | C# (.NET 8, `net8.0-tizen10.0`, `Tizen.NUI` & `Tizen.NUI.BaseComponents`) | The interface: hardware-accelerated NUI screens, animations, focus and remote control handling, TV IME/voice search, settings, translations, local data. Packages everything into a `.tpk`. |
+| `core` | C++20 | Everything else: HTTPS, YouTube's InnerTube API, sign-in, the MP4/WebM demuxers (with 10-bit HDR10/HLG metadata), the player driving `libesplusplayer.so`, SponsorBlock. Built as `libomegacore.so` with a small C API (`core/include/omega/core.h`). |
 
 ### Why this split?
 
@@ -100,14 +101,14 @@ OmegaTube is a ground-up rewrite. It does not use YouTube's web app or the brows
 
 - **Remote configuration (`remote-config.json`).** YouTube changes its private API often. The client names, versions and keys the app sends live in this file, not in the code. The app downloads the latest copy from this repository at startup (falling back to the copy built into it), so a YouTube change can often be fixed by editing one JSON file, without a new release.
 - **Direct stream URLs.** The main client returns stream URLs that play directly, so nothing has to run YouTube's JavaScript. If it fails, a fallback TV client is used and its URLs are deciphered with the embedded JavaScript engine.
-- **Pinned to Tizen 6.0 (API 8).** It is the oldest target the app supports. Newer TVs run older apps fine; the reverse is not true.
-- **Reproducible cross-compiling.** The C++ core is built in a Docker image (`toolchain/Dockerfile`, Debian buster, `arm-linux-gnueabi`). Its C library (glibc 2.28) is older than the TV's (2.30), so the binary runs on the TV whatever your own Linux distribution is.
+- **Modern Tizen 10 / .NET 8 target (`net8.0-tizen10.0`, API 10.0).** Legacy Tizen 5.5–8.0 compatibility layers, unused themes/counters (Glorious, Return YouTube Dislike), and old workarounds were stripped out so the UI and runtime stay lean.
+- **Reproducible cross-compiling.** The C++20 core is built in a Docker image (`toolchain/Dockerfile`, Debian bookworm, `arm-linux-gnueabi`) with static `libstdc++`/`libgcc` so the binary runs cleanly on modern Tizen TVs.
 
 ## Install it on your TV (step by step)
 
 You don't need any technical knowledge: you copy one line, then the installer tells you what to do. It takes about 10 minutes the first time.
 
-> **Which TVs?** Samsung smart TVs running **Tizen 6.0 or newer** (most models from **2021 onwards**). OmegaTube is developed on a 2021 AU series TV. Other models should work but are less tested. Feedback is welcome in the [issues](https://github.com/IIyn/omegatube/issues).
+> **Which TVs?** Samsung smart TVs running **Tizen 10.0 or newer**. (This fork is modernized specifically for Tizen 10 / .NET 8; for older Tizen 6.0–9.0 TVs, see the upstream [IIyn/omegatube](https://github.com/IIyn/omegatube) repository.)
 
 > **Why can't I just download it from the Samsung store?** Samsung's store does not accept apps like this one. Apps from outside the store must be **signed with a certificate made for your specific TV**, which needs a free Samsung account. The installer does all of this for you.
 
