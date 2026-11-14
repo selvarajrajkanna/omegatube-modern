@@ -69,7 +69,7 @@ add_library(omegacore SHARED
 )
 target_include_directories(omegacore PUBLIC include PRIVATE src ${OMEGA_DEPS})
 # qrcodegen is included as <qrcodegen/qrcodegen.hpp>
-target_compile_options(omegacore PRIVATE -Wall -Wextra -O2)
+target_compile_options(omegacore PRIVATE -Wall -Wextra -O2 $<$<CXX_COMPILER_ID:GNU>:-Wno-psabi>)
 set_target_properties(omegacore PROPERTIES CXX_VISIBILITY_PRESET hidden)
 
 find_package(Threads REQUIRED)
