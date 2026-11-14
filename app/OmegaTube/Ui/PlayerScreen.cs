@@ -902,7 +902,7 @@ namespace OmegaTube.Ui
                 }
                 catch (Exception e)
                 {
-                    Tizen.Log.Error("OmegaTube", "decoder step: " + e.Message);
+                    Tizen.Log.Error("omegatube-modern", "decoder step: " + e.Message);
                 }
             });
         }

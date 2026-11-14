@@ -42,7 +42,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: omegatube-tpk
+          name: omegatube-modern-tpk
           path: app/OmegaTube/bin/Release/net8.0-tizen10.0/**/*.tpk
 
       # Stable names: install.sh downloads them from releases/latest/download/.
@@ -54,8 +54,8 @@ jobs:
           VERSION=$(head -n1 VERSION)
           COMMIT_ID=$(git rev-parse --short HEAD)
           TPK=$(find app/OmegaTube/bin/Release -name '*.tpk' | head -n1)
-          cp "$TPK" dist/OmegaTube.tpk
-          cp "$TPK" "dist/omegatube-${VERSION}-${COMMIT_ID}.tpk"
+          cp "$TPK" dist/omegatube-modern.tpk
+          cp "$TPK" "dist/omegatube-modern-${VERSION}-${COMMIT_ID}.tpk"
           cp scripts/install-tv.sh dist/install.sh
           cp scripts/install-tv.ps1 dist/install.ps1
           cp tools/samsung-cert/SamsungCert.java dist/

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Generates a Samsung author + distributor certificate for the TV without the Tizen Studio GUI,
-# then registers it as the "omegatube" signing profile.
+# then registers it as the "omegatube-modern" signing profile.
 # Usage: scripts/gen-cert.sh <TV DUID> [author name]
 #        scripts/gen-cert.sh --distributor <DUID>[,<DUID>...]  (new distributor for more devices, e.g. the
 #        emulators: keeps the author certificate, so the app on the TV can still be updated)
@@ -12,9 +12,9 @@ if [ "${1:-}" = "--distributor" ]; then
   shift
 fi
 DUID="${1:?usage: gen-cert.sh [--distributor] <DUID>[,<DUID>...] [author name]}"
-NAME="${2:-OmegaTube}"
+NAME="${2:-omegatube-modern}"
 STUDIO="${TIZEN_STUDIO:-$HOME/tizen-studio}"
-OUT="$HOME/SamsungCertificate/omegatube"
+OUT="$HOME/SamsungCertificate/omegatube-modern"
 PLUGIN=$(ls "$STUDIO"/tools/certificate-manager/plugins/org.tizen.common.cert_*.jar | head -n1)
 
 rm -rf build/certjar && mkdir -p build/certjar && unzip -oq "$PLUGIN" -d build/certjar
@@ -29,5 +29,5 @@ else
 fi
 
 PW=$(sed -n 's/^author=//p' "$OUT/passwords.txt")
-"$STUDIO/tools/ide/bin/tizen" security-profiles add -f -n omegatube \
+"$STUDIO/tools/ide/bin/tizen" security-profiles add -f -n omegatube-modern \
   -a "$OUT/author.p12" -p "$PW" -d "$OUT/distributor.p12" -dp "$PW"

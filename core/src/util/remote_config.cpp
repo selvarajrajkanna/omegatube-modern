@@ -127,7 +127,7 @@ json check_update(const std::string& current_version) {
     std::string repo = str({"updates", "repo"});
     net::Request req;
     req.url = "https://api.github.com/repos/" + repo + "/releases/latest";
-    req.headers = {{"User-Agent", "OmegaTube"}, {"Accept", "application/vnd.github+json"}};
+    req.headers = {{"User-Agent", "omegatube-modern"}, {"Accept", "application/vnd.github+json"}};
     net::Response res = net::fetch(req);
     if (res.status == 404) return {{"available", false}};  // no release yet
     if (!res.ok()) return {{"error", res.error.empty() ? "http " + std::to_string(res.status) : res.error}};

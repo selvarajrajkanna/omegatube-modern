@@ -39,7 +39,7 @@ namespace OmegaTube
                 catch (Exception e)
                 {
                     LoadRoute = "NativeLibrary.Load failed: " + e.Message;
-                    Tizen.Log.Error("OmegaTube", LoadRoute);
+                    Tizen.Log.Error("omegatube-modern", LoadRoute);
                     throw;
                 }
             }

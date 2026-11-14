@@ -20,4 +20,4 @@ if [ -z "$TPK" ]; then
   exit 1
 fi
 "$TIZEN" install -n "$(basename "$TPK")" -t "$("$SDB" devices | awk -v t="$TARGET" '$1==t {print $3}')" -- "$(dirname "$TPK")"
-"$SDB" -s "$TARGET" shell 0 execute org.omegatube.app
+"$SDB" -s "$TARGET" shell 0 execute org.omegatube.modern

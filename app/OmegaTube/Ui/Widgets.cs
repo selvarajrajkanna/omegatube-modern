@@ -59,7 +59,7 @@ namespace OmegaTube.Ui
             }
             catch (System.Exception e)
             {
-                Tizen.Log.Warn("OmegaTube", "MaskedImage: " + e.Message);
+                Tizen.Log.Warn("omegatube-modern", "MaskedImage: " + e.Message);
                 iv.ResourceUrl = url;
             }
         }

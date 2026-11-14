@@ -1,4 +1,4 @@
-# Contributing to OmegaTube
+# Contributing to omegatube-modern
 
 Thanks for helping! Bug reports, ideas and pull requests are all welcome.
 
@@ -14,12 +14,12 @@ Please say in the pull request that you used an LLM, and for what. It's not held
 
 ## Reporting a bug or suggesting a feature
 
-- **Bug**: use the *Report a problem* screen in the app (Settings → About), or the [bug report form](https://github.com/IIyn/omegatube/issues/new?template=bug.yml).
-- **Idea or change**: use the [feature request form](https://github.com/IIyn/omegatube/issues/new?template=feature.yml). One idea per issue; if it already exists, add a 👍 or a comment there.
+- **Bug**: use the *Report a problem* screen in the app (Settings → About), or the [bug report form](https://github.com/selvarajrajkanna/omegatube-modern/issues/new?template=bug.yml).
+- **Idea or change**: use the [feature request form](https://github.com/selvarajrajkanna/omegatube-modern/issues/new?template=feature.yml). One idea per issue; if it already exists, add a 👍 or a comment there.
 
 ## Pull requests
 
-1. For anything bigger than a small fix, open or comment on an [issue](https://github.com/IIyn/omegatube/issues) first, so we agree on the approach before you spend time on it.
+1. For anything bigger than a small fix, open or comment on an [issue](https://github.com/selvarajrajkanna/omegatube-modern/issues) first, so we agree on the approach before you spend time on it.
 2. Fork the repository, create a branch from `main` (e.g. `fix/12-subtitles-offset`).
 3. **One topic per pull request.** Two unrelated fixes go in two pull requests: they can then be tested, discussed and merged separately.
 4. Open the pull request and fill in the template: what it changes, the issue it fixes (`Fixes #12`), how you tested it, and screenshots if any.
@@ -49,11 +49,11 @@ All three must pass before a merge. On a first contribution, GitHub asks the mai
 
 ### Testing a pull request on a TV
 
-Download the `omegatube-pr<number>` artifact from the pull request's *Checks* tab, unzip it, then sign it for your TV and install it:
+Download the `omegatube-modern-pr<number>` artifact from the pull request's *Checks* tab, unzip it, then sign it for your TV and install it:
 
 ```sh
-TPK=$(ls org.omegatube.app-*.tpk)
-~/tizen-studio/tools/ide/bin/tizen package -t tpk -s omegatube -- "$TPK"
+TPK=$(ls org.omegatube.modern-*.tpk)
+~/tizen-studio/tools/ide/bin/tizen package -t tpk -s omegatube-modern -- "$TPK"
 ~/tizen-studio/tools/ide/bin/tizen install -n "$TPK" -t <device> -- .   # device name: 3rd column of `sdb devices`
 ```
 

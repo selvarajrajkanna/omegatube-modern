@@ -11,7 +11,7 @@ namespace OmegaTube.Ui
     // skipped if it fails too.
     public class SafeErrorScreen : Screen
     {
-        private const string IssuesUrl = "github.com/IIyn/omegatube/issues";
+        private const string IssuesUrl = "github.com/selvarajrajkanna/omegatube-modern/issues";
 
         private readonly bool fatal;
 
@@ -20,7 +20,7 @@ namespace OmegaTube.Ui
             this.fatal = fatal;
             Root.BackgroundColor = new Color(0.07f, 0.07f, 0.07f, 1f);
 
-            Add(fatal ? T("OmegaTube cannot start on this TV") : T("OmegaTube ran into an error"), 46, Color.White, 100, 2);
+            Add(fatal ? T("omegatube-modern cannot start on this TV") : T("omegatube-modern ran into an error"), 46, Color.White, 100, 2);
             Add(T("Please report it on GitHub so it can be fixed:") + " " + IssuesUrl
                 + "\n" + T("Include the details below (a photo of the screen is fine)."), 28, Color.White, 190, 3);
             Add(SafeDeviceInfo(), 22, new Color(0.7f, 0.7f, 0.7f, 1f), 330, 8);
@@ -36,7 +36,7 @@ namespace OmegaTube.Ui
             }
             catch (Exception e)
             {
-                Tizen.Log.Error("OmegaTube", "safe error QR: " + e.Message);
+                Tizen.Log.Error("omegatube-modern", "safe error QR: " + e.Message);
             }
         }
 

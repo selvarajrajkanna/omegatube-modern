@@ -86,7 +86,7 @@ namespace OmegaTube
 
                 if (grabWindow == IntPtr.Zero)
                 {
-                    Tizen.Log.Warn("OmegaTube", "media key grab: native window not found");
+                    Tizen.Log.Warn("omegatube-modern", "media key grab: native window not found");
                     return;
                 }
 
@@ -103,17 +103,17 @@ namespace OmegaTube
                     if (success)
                     {
                         grabbedKeyNames.Add(keyName);
-                        Tizen.Log.Info("OmegaTube", $"media key grab: {keyName}");
+                        Tizen.Log.Info("omegatube-modern", $"media key grab: {keyName}");
                     }
                     else
                     {
-                        Tizen.Log.Warn("OmegaTube", $"media key grab failed: {keyName}");
+                        Tizen.Log.Warn("omegatube-modern", $"media key grab failed: {keyName}");
                     }
                 }
             }
             catch (Exception ex)
             {
-                Tizen.Log.Error("OmegaTube", $"media key grab error: {ex.Message}");
+                Tizen.Log.Error("omegatube-modern", $"media key grab error: {ex.Message}");
                 grabWindow = IntPtr.Zero;
             }
         }

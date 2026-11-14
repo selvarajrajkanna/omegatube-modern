@@ -81,7 +81,7 @@ namespace OmegaTube.Ui
             var title = Widgets.Label(T("Settings"), Theme.TitleSize + 12, Theme.Text, 480, 70);
             title.Position = new Position(80, 64);
             Root.Add(title);
-            var version = Widgets.Label("OmegaTube " + NativeCore.Version, Theme.SmallSize, Theme.TextMuted, 480);
+            var version = Widgets.Label("omegatube-modern " + NativeCore.Version, Theme.SmallSize, Theme.TextMuted, 480);
             version.Position = new Position(82, 134);
             Root.Add(version);
 
@@ -389,7 +389,7 @@ namespace OmegaTube.Ui
             l.Add(new Row { Title = T("License"), Hint = T("Free software, no ads and no data collection"), Value = () => "GPL-3.0" });
             l.Add(new Row { Title = T("Credits"), Hint = T("Interface inspired by SmartTube · SponsorBlock segments · SmartTube and Material icons"),
                             Value = () => "" });
-            l.Add(new Row { Title = T("YouTube is a trademark of Google LLC"), Hint = T("OmegaTube is an independent project, not affiliated with Google"),
+            l.Add(new Row { Title = T("YouTube is a trademark of Google LLC"), Hint = T("omegatube-modern is an independent project, not affiliated with Google"),
                             Value = () => "" });
         }
 

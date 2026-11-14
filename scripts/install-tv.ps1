@@ -1,15 +1,15 @@
 # One-command install for end users on Windows (PowerShell), the counterpart of install-tv.sh:
-#   irm https://raw.githubusercontent.com/IIyn/omegatube/main/scripts/install-tv.ps1 | iex
+#   irm https://raw.githubusercontent.com/selvarajrajkanna/omegatube-modern/main/scripts/install-tv.ps1 | iex
 # Guides through the TV's Developer Mode, sets up Java and the Tizen command-line tools if needed,
-# creates a Samsung certificate for the TV, then signs and installs the latest OmegaTube release.
-# Run as a file: .\install-tv.ps1 [TV IP address] [OmegaTube .tpk file]   (no arguments: asks interactively)
+# creates a Samsung certificate for the TV, then signs and installs the latest omegatube-modern release.
+# Run as a file: .\install-tv.ps1 [TV IP address] [omegatube-modern .tpk file]   (no arguments: asks interactively)
 
-$Repo = 'IIyn/omegatube'
+$Repo = 'selvarajrajkanna/omegatube-modern'
 $Release = "https://github.com/$Repo/releases/latest/download"
 $TizenStudioVersion = '6.1'
 # Tizen tools break on paths with spaces (often the case under C:\Users), so everything lives at the drive root.
 $TizenStudio = if ($env:TIZEN_STUDIO) { $env:TIZEN_STUDIO } else { "$env:SystemDrive\tizen-studio" }
-$Work = "$env:SystemDrive\omegatube-installer"
+$Work = "$env:SystemDrive\omegatube-modern-installer"
 $CertDir = "$Work\certificate"
 $Sdb = "$TizenStudio\tools\sdb.exe"
 $Tizen = "$TizenStudio\tools\ide\bin\tizen.bat"
@@ -107,7 +107,7 @@ function Connect-TV($tvIp) {
     Write-Host "Found $Device (DUID $Duid)"
 }
 
-# Samsung author + distributor certificate for the TV, registered as the "omegatube" signing profile.
+# Samsung author + distributor certificate for the TV, registered as the "omegatube-modern" signing profile.
 # Reused as long as it covers this TV, so updates keep the same signature.
 function Setup-Certificate {
     $duids = @()
@@ -116,7 +116,7 @@ function Setup-Certificate {
             Select-String -AllMatches 'deviceid=([A-Z0-9]+)' | ForEach-Object { $_.Matches } | ForEach-Object { $_.Groups[1].Value })
     }
     if ($duids -contains $Duid) {
-        if (& $Tizen security-profiles list | Select-String -Quiet '\bomegatube\b') { return }
+        if (& $Tizen security-profiles list | Select-String -Quiet '\bomegatube-modern\b') { return }
     } else {
         Step 'Creating your Samsung certificate: a browser page opens, sign in with your Samsung account'
         $javaSrc = if ($SrcDir) { Join-Path $SrcDir '..\tools\samsung-cert\SamsungCert.java' } else { '' }
@@ -130,29 +130,29 @@ function Setup-Certificate {
         Run tar.exe -xf $plugin.FullName -C "$Work\certjar"
         $slf4j = Get-ChildItem "$TizenStudio\tools\ide\lib-ncli\slf4j-api-*.jar" | Select-Object -First 1
         $cp = (@("$Work\certjar") + (Get-ChildItem "$Work\certjar\lib\*.jar").FullName + $slf4j.FullName) -join ';'
-        Run "$JavaBin\java.exe" -cp $cp $javaSrc $CertDir OmegaTube ((@($duids) + $Duid) -join ',')
+        Run "$JavaBin\java.exe" -cp $cp $javaSrc $CertDir omegatube-modern ((@($duids) + $Duid) -join ',')
     }
     $pw = (Select-String -Path "$CertDir\passwords.txt" -Pattern '^author=(.*)$').Matches[0].Groups[1].Value
-    Run $Tizen security-profiles add -f -n omegatube -a "$CertDir\author.p12" -p $pw -d "$CertDir\distributor.p12" -dp $pw | Out-Null
+    Run $Tizen security-profiles add -f -n omegatube-modern -a "$CertDir\author.p12" -p $pw -d "$CertDir\distributor.p12" -dp $pw | Out-Null
 }
 
 function Install-App($tpkIn) {
-    $tpk = "$Work\OmegaTube.tpk"
+    $tpk = "$Work\omegatube-modern.tpk"
     if ($tpkIn) {
         Copy-Item $tpkIn $tpk
     } else {
-        Step 'Downloading the latest OmegaTube'
-        Download "$Release/OmegaTube.tpk" $tpk
+        Step 'Downloading the latest omegatube-modern'
+        Download "$Release/omegatube-modern.tpk" $tpk
     }
     Step 'Signing the app for your TV'
-    Run $Tizen package -t tpk -s omegatube '--' $tpk | Out-Null
+    Run $Tizen package -t tpk -s omegatube-modern '--' $tpk | Out-Null
     Step 'Installing on the TV'
-    Run $Tizen install -n OmegaTube.tpk -t $Device '--' $Work
-    & $Sdb -s $Target shell 0 execute org.omegatube.app | Out-Null
+    Run $Tizen install -n omegatube-modern.tpk -t $Device '--' $Work
+    & $Sdb -s $Target shell 0 execute org.omegatube.modern | Out-Null
 }
 
-function Install-OmegaTube($tvIp, $tpkIn) {
-    Write-Host "`nOmegaTube installer" -ForegroundColor White
+function Install-OmegaTubeModern($tvIp, $tpkIn) {
+    Write-Host "`nomegatube-modern installer" -ForegroundColor White
     New-Item -ItemType Directory -Force $Work | Out-Null
     Setup-Java
     Setup-Tizen
@@ -160,7 +160,7 @@ function Install-OmegaTube($tvIp, $tpkIn) {
     Connect-TV $tvIp
     Setup-Certificate
     Install-App $tpkIn
-    Write-Host "`nDone! OmegaTube is in the Apps list of your TV." -ForegroundColor Green
+    Write-Host "`nDone! omegatube-modern is in the Apps list of your TV." -ForegroundColor Green
     Write-Host 'Open it, then go to Account to sign in to YouTube with your phone.'
 }
 
@@ -168,7 +168,7 @@ function Install-OmegaTube($tvIp, $tpkIn) {
 try {
     $ErrorActionPreference = 'Stop'
     $ProgressPreference = 'SilentlyContinue'
-    Install-OmegaTube $(if ($args.Count -gt 0) { $args[0] }) $(if ($args.Count -gt 1) { $args[1] })
+    Install-OmegaTubeModern $(if ($args.Count -gt 0) { $args[0] }) $(if ($args.Count -gt 1) { $args[1] })
 } catch {
     Write-Host "`n[!] $($_.Exception.Message)" -ForegroundColor Red
 }

@@ -1,23 +1,23 @@
 #!/usr/bin/env bash
 # One-command install for end users (Linux / macOS), published with every release:
-#   curl -fsSL https://github.com/IIyn/omegatube/releases/latest/download/install.sh | bash
+#   curl -fsSL https://github.com/selvarajrajkanna/omegatube-modern/releases/latest/download/install.sh | bash
 # Guides through the TV's Developer Mode, sets up Java and the Tizen command-line tools if needed,
-# creates a Samsung certificate for the TV, then signs and installs the latest OmegaTube release.
-# Usage: install.sh [TV IP address] [OmegaTube .tpk file]   (no arguments: asks interactively)
+# creates a Samsung certificate for the TV, then signs and installs the latest omegatube-modern release.
+# Usage: install.sh [TV IP address] [omegatube-modern .tpk file]   (no arguments: asks interactively)
 set -euo pipefail
 
 # Everything runs from main(), so that bash has read the whole script before any command can consume stdin.
 main() {
   TV_IP="${1:-}"
   TPK_IN="${2:-}"
-  REPO=IIyn/omegatube
+  REPO=selvarajrajkanna/omegatube-modern
   RELEASE="https://github.com/$REPO/releases/latest/download"
   TIZEN_STUDIO_VERSION=6.1
   export TIZEN_STUDIO="${TIZEN_STUDIO:-$HOME/tizen-studio}"
   SDB="$TIZEN_STUDIO/tools/sdb"
   TIZEN="$TIZEN_STUDIO/tools/ide/bin/tizen"
-  CERT_DIR="$HOME/SamsungCertificate/omegatube"
-  WORK="$HOME/.omegatube-installer"
+  CERT_DIR="$HOME/SamsungCertificate/omegatube-modern"
+  WORK="$HOME/.omegatube-modern-installer"
   SRC_DIR=$(cd "$(dirname "${BASH_SOURCE[0]:-.}")" 2>/dev/null && pwd || echo .)
   mkdir -p "$WORK"
 
@@ -30,7 +30,7 @@ main() {
     command -v "$tool" >/dev/null || fail "'$tool' is missing: install it with your package manager and run this again."
   done
 
-  printf '\n\033[1mOmegaTube installer\033[0m\n'
+  printf '\n\033[1momegatube-modern installer\033[0m\n'
 
   setup_java
   setup_tizen
@@ -39,7 +39,7 @@ main() {
   setup_certificate
   install_app
 
-  printf '\n\033[32mDone! OmegaTube is in the Apps list of your TV.\033[0m\n'
+  printf '\n\033[32mDone! omegatube-modern is in the Apps list of your TV.\033[0m\n'
   printf 'Open it, then go to Account to sign in to YouTube with your phone.\n'
 }
 
@@ -136,7 +136,7 @@ connect_tv() {
   echo "Found $DEVICE (DUID $DUID)"
 }
 
-# Samsung author + distributor certificate for the TV, registered as the "omegatube" signing profile.
+# Samsung author + distributor certificate for the TV, registered as the "omegatube-modern" signing profile.
 # Reused as long as it covers this TV, so updates keep the same signature.
 setup_certificate() {
   local duids=""
@@ -145,7 +145,7 @@ setup_certificate() {
       | grep -o 'deviceid=[A-Z0-9]*' | cut -d= -f2 | paste -sd, - || true)
   fi
   if printf ',%s,' "$duids" | grep -q ",$DUID,"; then
-    "$TIZEN" security-profiles list 2>/dev/null | grep -qw omegatube && return
+    "$TIZEN" security-profiles list 2>/dev/null | grep -qw omegatube-modern && return
   else
     step "Creating your Samsung certificate: a browser page opens, sign in with your Samsung account"
     local java_src="$SRC_DIR/../tools/samsung-cert/SamsungCert.java"
@@ -157,28 +157,28 @@ setup_certificate() {
     plugin=$(ls "$TIZEN_STUDIO"/tools/certificate-manager/plugins/org.tizen.common.cert_*.jar | head -n1)
     rm -rf "$WORK/certjar" && mkdir -p "$WORK/certjar" && unzip -oq "$plugin" -d "$WORK/certjar"
     cp="$WORK/certjar:$(ls "$WORK"/certjar/lib/*.jar | tr '\n' ':')$(ls "$TIZEN_STUDIO"/tools/ide/lib-ncli/slf4j-api-*.jar | head -n1)"
-    java -cp "$cp" "$java_src" "$CERT_DIR" OmegaTube "${duids:+$duids,}$DUID"
+    java -cp "$cp" "$java_src" "$CERT_DIR" omegatube-modern "${duids:+$duids,}$DUID"
   fi
   local pw
   pw=$(sed -n 's/^author=//p' "$CERT_DIR/passwords.txt")
-  "$TIZEN" security-profiles add -f -n omegatube \
+  "$TIZEN" security-profiles add -f -n omegatube-modern \
     -a "$CERT_DIR/author.p12" -p "$pw" -d "$CERT_DIR/distributor.p12" -dp "$pw" >/dev/null
 }
 
 install_app() {
-  local tpk="$WORK/OmegaTube.tpk"
+  local tpk="$WORK/omegatube-modern.tpk"
   if [ -n "$TPK_IN" ]; then
     cp "$TPK_IN" "$tpk"
   else
-    step "Downloading the latest OmegaTube"
-    curl -fL --progress-bar -o "$tpk" "$RELEASE/OmegaTube.tpk" \
-      || fail "Could not download OmegaTube from github.com/$REPO/releases."
+    step "Downloading the latest omegatube-modern"
+    curl -fL --progress-bar -o "$tpk" "$RELEASE/omegatube-modern.tpk" \
+      || fail "Could not download omegatube-modern from github.com/$REPO/releases."
   fi
   step "Signing the app for your TV"
-  "$TIZEN" package -t tpk -s omegatube -- "$tpk" >/dev/null
+  "$TIZEN" package -t tpk -s omegatube-modern -- "$tpk" >/dev/null
   step "Installing on the TV"
   "$TIZEN" install -n "$(basename "$tpk")" -t "$DEVICE" -- "$WORK"
-  "$SDB" -s "$TARGET" shell 0 execute org.omegatube.app >/dev/null 2>&1 || true
+  "$SDB" -s "$TARGET" shell 0 execute org.omegatube.modern >/dev/null 2>&1 || true
 }
 
 main "$@"

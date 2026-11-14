@@ -97,6 +97,6 @@ jobs:
       # (see "Testing a PR on a TV" in the README).
       - uses: actions/upload-artifact@v4
         with:
-          name: omegatube-${{ github.event.pull_request.number && format('pr{0}', github.event.pull_request.number) || github.sha }}
+          name: omegatube-modern-${{ github.event.pull_request.number && format('pr{0}', github.event.pull_request.number) || github.sha }}
           path: app/OmegaTube/bin/Release/net8.0-tizen10.0/**/*.tpk
           retention-days: 14

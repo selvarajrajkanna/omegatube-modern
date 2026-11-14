@@ -147,7 +147,7 @@ namespace OmegaTube.Config
             }
             catch (Exception e)
             {
-                Tizen.Log.Error("OmegaTube", "config.json ignored: " + e.Message);
+                Tizen.Log.Error("omegatube-modern", "config.json ignored: " + e.Message);
             }
             cfg.HomeRows = DefaultRows();
             return cfg;
@@ -161,7 +161,7 @@ namespace OmegaTube.Config
             }
             catch (Exception e)
             {
-                Tizen.Log.Error("OmegaTube", "config.json save failed: " + e.Message);
+                Tizen.Log.Error("omegatube-modern", "config.json save failed: " + e.Message);
             }
         }
 

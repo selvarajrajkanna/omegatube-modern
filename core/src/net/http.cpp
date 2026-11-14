@@ -60,7 +60,7 @@ struct TlsContext {
         mbedtls_ctr_drbg_init(&drbg);
         mbedtls_x509_crt_init(&ca);
         mbedtls_ssl_config_init(&conf);
-        const char* pers = "omegatube";
+        const char* pers = "omegatube-modern";
         int rc = mbedtls_ctr_drbg_seed(&drbg, mbedtls_entropy_func, &entropy,
                                        reinterpret_cast<const unsigned char*>(pers), strlen(pers));
         if (rc != 0) {
@@ -296,7 +296,7 @@ bool Connection::send(const Request& req) {
         msg.append(h.first).append(": ").append(h.second).append("\r\n");
         has_ua |= iequals(h.first, "User-Agent");
     }
-    if (!has_ua) msg.append("User-Agent: OmegaTube\r\n");
+    if (!has_ua) msg.append("User-Agent: omegatube-modern\r\n");
     if (!req.body.empty() || req.method == "POST") {
         msg.append("Content-Length: ").append(std::to_string(req.body.size())).append("\r\n");
     }

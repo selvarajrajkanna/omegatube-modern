@@ -3,7 +3,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-PROFILE="${TIZEN_PROFILE:-omegatube}"
+PROFILE="${TIZEN_PROFILE:-omegatube-modern}"
 TIZEN="${TIZEN_STUDIO:-$HOME/tizen-studio}/tools/ide/bin/tizen"
 
 # Single version source: VERSION -> manifest (the core embeds it at compile time).

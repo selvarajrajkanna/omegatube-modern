@@ -35,11 +35,11 @@ namespace OmegaTube.Ui
             this.fatal = fatal;
             Root.BackgroundColor = Theme.Background;
 
-            string title = fatal ? T("OmegaTube cannot start on this TV")
-                         : recovered ? T("OmegaTube ran into an error")
-                         : crash != null ? T("OmegaTube stopped because of an error")
+            string title = fatal ? T("omegatube-modern cannot start on this TV")
+                         : recovered ? T("omegatube-modern ran into an error")
+                         : crash != null ? T("omegatube-modern stopped because of an error")
                          : T("Report a problem");
-            string body = fatal ? T("Scan the QR code with your phone: it opens a GitHub issue already filled in with this TV's model and the error. Sending it helps make OmegaTube work on your TV.")
+            string body = fatal ? T("Scan the QR code with your phone: it opens a GitHub issue already filled in with this TV's model and the error. Sending it helps make omegatube-modern work on your TV.")
                         : crash != null ? T("Scan the QR code with your phone to report it: the GitHub issue is already filled in with this TV's model and the error. Add what you were doing, then send it.")
                         : T("Scan the QR code with your phone: it opens a GitHub issue already filled in with this TV's model and the end of the log. Describe the problem, then send it.");
 
@@ -75,7 +75,7 @@ namespace OmegaTube.Ui
             Root.Add(close);
 
             status = Widgets.Label(T("A free GitHub account is needed to send the issue.")
-                                   + (canUpload ? "\n" + T("The full log is sent to OmegaTube's server and kept 90 days, after removing account data, addresses, titles and searches. Anyone with the link can read it.") : ""),
+                                   + (canUpload ? "\n" + T("The full log is sent to omegatube-modern's server and kept 90 days, after removing account data, addresses, titles and searches. Anyone with the link can read it.") : ""),
                                    Theme.SmallSize, Theme.TextDim, TextW, 110);
             status.MultiLine = true;
             status.Ellipsis = false;

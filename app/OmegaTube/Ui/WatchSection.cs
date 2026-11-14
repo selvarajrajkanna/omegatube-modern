@@ -239,7 +239,7 @@ namespace OmegaTube.Ui
             loading = false;
             if (page.Error != null)
             {
-                Tizen.Log.Warn("OmegaTube", "comments: " + page.Error);
+                Tizen.Log.Warn("omegatube-modern", "comments: " + page.Error);
                 if (entries.Count == 0)
                 {
                     ShowStatus(T("Comments unavailable"));
@@ -929,7 +929,7 @@ namespace OmegaTube.Ui
             {
                 return;
             }
-            Tizen.Log.Warn("OmegaTube", "comment vote: " + error);
+            Tizen.Log.Warn("omegatube-modern", "comment vote: " + error);
             Toast?.Invoke(T("Couldn't save your rating: {0}", error));
             if (entries.Contains(e))
             {
@@ -1002,7 +1002,7 @@ namespace OmegaTube.Ui
             }
             if (page.Error != null)
             {
-                Tizen.Log.Warn("OmegaTube", "replies: " + page.Error);
+                Tizen.Log.Warn("omegatube-modern", "replies: " + page.Error);
                 Toast?.Invoke(T("Replies unavailable"));
                 if (row != null)
                 {
@@ -1136,7 +1136,7 @@ namespace OmegaTube.Ui
             entry?.SetBusy(false);
             if (error != null)
             {
-                Tizen.Log.Warn("OmegaTube", "post comment: " + error);
+                Tizen.Log.Warn("omegatube-modern", "post comment: " + error);
                 Toast?.Invoke(T("Comment not posted: {0}", error));
                 return;
             }

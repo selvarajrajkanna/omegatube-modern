@@ -104,7 +104,7 @@ omega_player* start_youtube(void* window, int width, int height, omega::yt::Clie
         }
         return !v.empty() && !a.empty();
     };
-    cfg.app_id = "org.omegatube.app";
+    cfg.app_id = "org.omegatube.modern";
     cfg.app_version = kVersion;
     auto* p = new omega_player(std::move(cfg));
     if (!p->impl.start()) {
@@ -598,10 +598,10 @@ char* omega_report_upload(const char* text) {
     if (req.url.empty()) return to_c_json({{"error", "no log service configured"}});
     std::string field = omega::cfg::str({"reports", "field"});
     if (field.empty()) {
-        req.headers = {{"User-Agent", "OmegaTube"}, {"Content-Type", "text/plain; charset=utf-8"}};
+        req.headers = {{"User-Agent", "omegatube-modern"}, {"Content-Type", "text/plain; charset=utf-8"}};
         req.body = text ? text : "";
     } else {
-        req.headers = {{"User-Agent", "OmegaTube"}, {"Content-Type", "application/x-www-form-urlencoded"}};
+        req.headers = {{"User-Agent", "omegatube-modern"}, {"Content-Type", "application/x-www-form-urlencoded"}};
         req.body = field + "=" + form_escape(text ? text : "");
         std::string params = omega::cfg::str({"reports", "params"});
         if (!params.empty()) req.body += "&" + params;

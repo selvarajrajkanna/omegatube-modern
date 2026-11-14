@@ -145,7 +145,7 @@ namespace OmegaTube.Data
             }
             catch (Exception e)
             {
-                Tizen.Log.Error("OmegaTube", name + ": " + e.Message);
+                Tizen.Log.Error("omegatube-modern", name + ": " + e.Message);
             }
         }
     }

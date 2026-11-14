@@ -14,7 +14,7 @@ namespace OmegaTube
     public static class BugReport
     {
         // Not read from remote-config.json (updates.repo): that needs the core.
-        private const string IssueBase = "https://github.com/IIyn/omegatube/issues/new?template=bug.yml";
+        private const string IssueBase = "https://github.com/selvarajrajkanna/omegatube-modern/issues/new?template=bug.yml";
         // QR code version ~24 at ECC low: still easy to scan from the couch on a 1080p screen.
         private const int UrlBudget = 1100;
 
@@ -136,7 +136,7 @@ namespace OmegaTube
         {
             return string.Join("\n", new[]
             {
-                "OmegaTube: " + AppVersion,
+                "omegatube-modern: " + AppVersion,
                 "Model: " + Model,
                 "Tizen: " + TizenVersion,
                 "Firmware: " + FirmwareVersion,

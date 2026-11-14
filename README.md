@@ -1,11 +1,11 @@
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="branding/omegatube-mark-dark.png">
-    <img src="branding/omegatube-mark-light.png" width="128" alt="OmegaTube logo">
+    <img src="branding/omegatube-mark-light.png" width="128" alt="omegatube-modern logo">
   </picture>
 </p>
 
-<h1 align="center">OmegaTube</h1>
+<h1 align="center">omegatube-modern</h1>
 
 <p align="center">
   A native YouTube client for Samsung smart TVs (Tizen 10) with SponsorBlock built in<br>
@@ -18,7 +18,7 @@
 ## Contents
 
 - [Features](#features)
-- [Why OmegaTube?](#why-omegatube)
+- [Why omegatube-modern?](#why-omegatube-modern)
 - [How it works](#how-it-works)
 - [Install it on your TV (step by step)](#install-it-on-your-tv-step-by-step)
 - [Install it with Apps2Samsung](#install-it-with-apps2samsung)
@@ -44,7 +44,7 @@
 - **A remote-friendly interface** in the **Omega** layout, with a customisable side menu.
 - **Languages**: English, French, Spanish (keyboard layout defaults to English India).
 
-## Why OmegaTube?
+## Why omegatube-modern?
 
 On Android TV, [SmartTube](https://github.com/yuliskov/SmartTube) is the reference YouTube client. **Samsung TVs don't run Android but Tizen**, and SmartTube doesn't exist for Tizen.
 
@@ -53,13 +53,13 @@ stuttering video, audio dropouts, and audible "thumps" when the audio buffer run
 
 Those bugs can't be fixed from TizenTube. A web app plays video through the **TV's built-in browser engine** (HTML5 `<video>` + Media Source Extensions). On these TVs that engine is old and closed, and the JavaScript has no control over how it buffers and decodes. A smooth player had to bypass the browser entirely.
 
-OmegaTube is a ground-up rewrite. It does not use YouTube's web app or the browser's player. It downloads the streams itself and feeds the audio and video data straight to the TV's hardware decoders through Samsung's native player API, so buffering stays under the app's control. Playback is as smooth as the TV's own apps.
+omegatube-modern is a ground-up rewrite. It does not use YouTube's web app or the browser's player. It downloads the streams itself and feeds the audio and video data straight to the TV's hardware decoders through Samsung's native player API, so buffering stays under the app's control. Playback is as smooth as the TV's own apps.
 
 ## How it works
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
-│  OmegaTube.tpk                                               │
+│  omegatube-modern.tpk                                        │
 │                                                              │
 │  ┌────────────────────────────┐   P/Invoke   ┌─────────────┐ │
 │  │ C# shell (TizenFX / NUI)   │ ───────────▶ │ C++ core    │ │
@@ -129,13 +129,13 @@ You don't need any technical knowledge: you copy one line, then the installer te
 **Windows:**
 
 ```powershell
-irm https://raw.githubusercontent.com/IIyn/omegatube/main/scripts/install-tv.ps1 | iex
+irm https://raw.githubusercontent.com/selvarajrajkanna/omegatube-modern/main/scripts/install-tv.ps1 | iex
 ```
 
 **macOS and Linux:**
 
 ```sh
-curl -fsSL https://github.com/IIyn/omegatube/releases/latest/download/install.sh | bash
+curl -fsSL https://github.com/selvarajrajkanna/omegatube-modern/releases/latest/download/install.sh | bash
 ```
 
 ### 3. Follow the instructions
@@ -150,9 +150,9 @@ The installer does everything else and tells you when it needs you:
    - **restart the TV**: hold the remote's power button until the Samsung logo appears again.
 3. It asks for **the TV's address**. You can find it on the TV in **Settings → General → Network → Network Status → IP Settings** (for example `192.168.1.9`).
 4. It **opens a Samsung sign-in page in your browser**: sign in (or create an account). This creates the certificate for *your* TV. You only do this once.
-5. It downloads the latest OmegaTube, signs it for your TV, installs it and opens it.
+5. It downloads the latest omegatube-modern, signs it for your TV, installs it and opens it.
 
-When you see **"Done!"**, OmegaTube is in your TV's app list. In the app, open **Account** to sign in to YouTube by scanning the QR code with your phone.
+When you see **"Done!"**, omegatube-modern is in your TV's app list. In the app, open **Account** to sign in to YouTube by scanning the QR code with your phone.
 
 ### Updating
 
@@ -160,26 +160,26 @@ Run the same line again. Your certificate is reused, so there's no Samsung sign-
 
 ### Where things go
 
-The installer only writes in these folders, which you can delete once OmegaTube is installed (keep the certificate if you want updates to keep your settings):
+The installer only writes in these folders, which you can delete once omegatube-modern is installed (keep the certificate if you want updates to keep your settings):
 
 | | Samsung's TV tools | Java, downloads, certificate |
 | --- | --- | --- |
-| Windows | `C:\tizen-studio` | `C:\omegatube-installer` (certificate in `certificate\`) |
-| macOS / Linux | `~/tizen-studio` | `~/.omegatube-installer`, certificate in `~/SamsungCertificate/omegatube` |
+| Windows | `C:\tizen-studio` | `C:\omegatube-modern-installer` (certificate in `certificate\`) |
+| macOS / Linux | `~/tizen-studio` | `~/.omegatube-modern-installer`, certificate in `~/SamsungCertificate/omegatube-modern` |
 
 ### Without the one-liner
 
-You can also download `install.ps1` (Windows) or `install.sh` (macOS, Linux) from the [latest release](https://github.com/IIyn/omegatube/releases/latest) and run it, optionally with the TV address to skip the questions: `bash install.sh 192.168.1.9`, or in PowerShell `powershell -ExecutionPolicy Bypass -File install.ps1 192.168.1.9`.
+You can also download `install.ps1` (Windows) or `install.sh` (macOS, Linux) from the [latest release](https://github.com/selvarajrajkanna/omegatube-modern/releases/latest) and run it, optionally with the TV address to skip the questions: `bash install.sh 192.168.1.9`, or in PowerShell `powershell -ExecutionPolicy Bypass -File install.ps1 192.168.1.9`.
 
 ## Install it with Apps2Samsung
 
-Prefer an app with buttons over a terminal? OmegaTube is in the community catalog of [Apps2Samsung](https://github.com/Apps2Samsung/Apps2Samsung), a free installer for Windows, macOS and Linux that handles Developer Mode, the Samsung certificate and the install for you.
+Prefer an app with buttons over a terminal? omegatube-modern is in the community catalog of [Apps2Samsung](https://github.com/Apps2Samsung/Apps2Samsung), a free installer for Windows, macOS and Linux that handles Developer Mode, the Samsung certificate and the install for you.
 
 1. Download Apps2Samsung from its [releases page](https://github.com/Apps2Samsung/Apps2Samsung/releases) and open it.
 2. Turn on **Developer Mode** on the TV as described in step 3 above, with the address of the computer running Apps2Samsung.
-3. In Apps2Samsung, pick your TV, choose **OmegaTube** in the app list (category *Streaming*) and install.
+3. In Apps2Samsung, pick your TV, choose **omegatube-modern** in the app list (category *Streaming*) and install.
 
-The catalog picks up each new OmegaTube release within a day: install it again from Apps2Samsung to update. Best stick to one installer: each one signs the app with its own certificate, so switching from one to the other may need an uninstall first (see the *signature* error below).
+The catalog picks up each new omegatube-modern release within a day: install it again from Apps2Samsung to update. Best stick to one installer: each one signs the app with its own certificate, so switching from one to the other may need an uninstall first (see the *signature* error below).
 
 ## Troubleshooting
 
@@ -189,31 +189,31 @@ The catalog picks up each new OmegaTube release within a day: install it again f
 | Windows asks whether to allow *sdb* or *Java* through the firewall | Allow it on private networks: it's how the computer talks to the TV and receives the Samsung sign-in. |
 | A Mac with an Apple chip asks to install *Rosetta* | Accept: Samsung's TV tools are built for Intel Macs and need it. |
 | The browser page doesn't open | Copy the link printed in the terminal into your browser. |
-| Install fails with a *signature* or *certificate* error | An older OmegaTube signed with another certificate is installed. Uninstall it on the TV (Apps → OmegaTube → long-press OK → Delete) and run the installer again. |
+| Install fails with a *signature* or *certificate* error | An older omegatube-modern signed with another certificate is installed. Uninstall it on the TV (Apps → omegatube-modern → long-press OK → Delete) and run the installer again. |
 | The app disappeared after a few days | This shouldn't happen with Developer Mode on. Run the installer again. |
-| Another tool (e.g. TizenBrew) needs a different *Host PC IP* | You can change it back after installing. OmegaTube keeps working; the address only matters while installing. |
-| Your Samsung certificate expired (after one year) | Run the installer again to create a new one. If the install is refused, uninstall OmegaTube first (you will have to sign in to YouTube again). |
+| Another tool (e.g. TizenBrew) needs a different *Host PC IP* | You can change it back after installing. omegatube-modern keeps working; the address only matters while installing. |
+| Your Samsung certificate expired (after one year) | Run the installer again to create a new one. If the install is refused, uninstall omegatube-modern first (you will have to sign in to YouTube again). |
 | A video won't play / YouTube changed something | [Report it](#reporting-a-bug) with the video link. Many fixes arrive through `remote-config.json` and need no reinstall. |
 | The app opens, goes black and closes | Update to the latest version and open it again: instead of closing, it now shows what went wrong with a QR code to [report it](#reporting-a-bug). |
 
 ## Reporting a bug
 
-OmegaTube runs on many TV models and Tizen versions that we can't all test, so reports from your TV are very welcome. The app fills them in for you:
+omegatube-modern runs on many TV models and Tizen versions that we can't all test, so reports from your TV are very welcome. The app fills them in for you:
 
-1. On the TV, open **Settings → About → Report a problem**. After a crash, or when OmegaTube can't start on your TV, this screen shows up by itself.
-2. Scan the QR code with your phone's camera. It opens a [GitHub issue](https://github.com/IIyn/omegatube/issues/new?template=bug.yml) already filled in with the app version, the TV model, the Tizen version and the error or the end of the log.
+1. On the TV, open **Settings → About → Report a problem**. After a crash, or when omegatube-modern can't start on your TV, this screen shows up by itself.
+2. Scan the QR code with your phone's camera. It opens a [GitHub issue](https://github.com/selvarajrajkanna/omegatube-modern/issues/new?template=bug.yml) already filled in with the app version, the TV model, the Tizen version and the error or the end of the log.
 3. Add a few words about what you were doing (and the video link for a playback problem), then send it. You need a free GitHub account.
 
-**Attach the full log** (on the same screen) adds a link to the whole log of this session and the previous one. It is sent to OmegaTube's own server ([omegatube-logs](https://github.com/IIyn/omegatube-logs), a small Cloudflare Worker) and deleted after 90 days; anyone with the link can read it, so OmegaTube first removes account tokens, stream links, e-mail and IP addresses, video titles and searches. Nothing is sent unless you press it, and you can ask for a log to be deleted in the issue.
+**Attach the full log** (on the same screen) adds a link to the whole log of this session and the previous one. It is sent to omegatube-modern's own server ([omegatube-logs](https://github.com/IIyn/omegatube-logs), a small Cloudflare Worker) and deleted after 90 days; anyone with the link can read it, so omegatube-modern first removes account tokens, stream links, e-mail and IP addresses, video titles and searches. Nothing is sent unless you press it, and you can ask for a log to be deleted in the issue.
 
-No QR code? Open an [issue](https://github.com/IIyn/omegatube/issues/new?template=bug.yml) by hand with your TV model (Settings → Support → About This TV), the Tizen version and what happened.
+No QR code? Open an [issue](https://github.com/selvarajrajkanna/omegatube-modern/issues/new?template=bug.yml) by hand with your TV model (Settings → Support → About This TV), the Tizen version and what happened.
 
 ## Suggesting a feature
 
-Have an idea for OmegaTube? Anyone can suggest a new feature, a change to how something works, a different default or any other recommendation: open a [feature request](https://github.com/IIyn/omegatube/issues/new?template=feature.yml).
+Have an idea for omegatube-modern? Anyone can suggest a new feature, a change to how something works, a different default or any other recommendation: open a [feature request](https://github.com/selvarajrajkanna/omegatube-modern/issues/new?template=feature.yml).
 
 - One idea per issue, so each one can be discussed on its own.
-- Check the [existing issues](https://github.com/IIyn/omegatube/issues) first: if someone already suggested it, add a 👍 or a comment there. Votes help choose what comes next.
+- Check the [existing issues](https://github.com/selvarajrajkanna/omegatube-modern/issues) first: if someone already suggested it, add a 👍 or a comment there. Votes help choose what comes next.
 - Explain what it would change for you, not only what to add: the problem behind an idea often matters more than the exact solution.
 
 Want to build it yourself? Say so in the issue, then see [Contributing code](#contributing-code).
@@ -241,7 +241,7 @@ Pull requests are welcome, including code written with the help of an AI, as lon
 
 ```sh
 scripts/fetch-deps.sh                       # third-party sources -> build/deps (pinned versions)
-scripts/gen-cert.sh <TV DUID> "Your name"   # Samsung certificate + "omegatube" signing profile, once
+scripts/gen-cert.sh <TV DUID> "Your name"   # Samsung certificate + "omegatube-modern" signing profile, once
 scripts/build-app.sh                        # core (Docker) + C# app -> signed .tpk
 TV_IP=192.168.1.9 scripts/deploy.sh         # install + launch on the TV
 ```
@@ -297,14 +297,14 @@ App texts are written in English in the code (`T("Settings")`). The French, Span
 
 1. Bump `VERSION`, commit, push.
 2. Publish a GitHub release with the tag `v<VERSION>` (e.g. `v1.0.1`).
-3. The [`Release build`](.github/workflows/release.yml) workflow builds the core and the app and attaches `OmegaTube.tpk`, `install.sh` and `install.ps1` (copies of `scripts/install-tv.sh` / `.ps1`) and `SamsungCert.java` to the release, under these fixed names. The installers download them from `releases/latest/download/`, so they always install the newest release. The Windows one-liner reads `scripts/install-tv.ps1` from `main` (served as text, which `irm | iex` needs), so keep it working on `main`.
+3. The [`Release build`](.github/workflows/release.yml) workflow builds the core and the app and attaches `omegatube-modern.tpk`, `install.sh` and `install.ps1` (copies of `scripts/install-tv.sh` / `.ps1`) and `SamsungCert.java` to the release, under these fixed names. The installers download them from `releases/latest/download/`, so they always install the newest release. The Windows one-liner reads `scripts/install-tv.ps1` from `main` (served as text, which `irm | iex` needs), so keep it working on `main`.
 
 The CI package keeps the SDK's test signature: every user signs it for their own TV during installation.
 
 ## Credits and license
 
-OmegaTube is free software under the [GNU GPL v3](LICENSE).
+omegatube-modern is free software under the [GNU GPL v3](LICENSE).
 
 It stands on the shoulders of [SmartTube](https://github.com/yuliskov/SmartTube) (interface and icons), [ytps5-sponsorblock](https://github.com/animatian112/ytps5-sponsorblock) (sign-in, InnerTube and watch history approach), [SponsorBlock](https://sponsor.ajay.app), [Return YouTube Dislike](https://returnyoutubedislike.com), [yt-dlp](https://github.com/yt-dlp/yt-dlp)'s EJS solver and other libraries. The full list and their licenses are in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
-YouTube is a trademark of Google LLC. OmegaTube is an independent project, not affiliated with Google, YouTube or Samsung.
+YouTube is a trademark of Google LLC. omegatube-modern is an independent project, not affiliated with Google, YouTube or Samsung.

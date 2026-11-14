@@ -49,7 +49,7 @@ namespace OmegaTube
             {
                 // Typically libomegacore.so failing to load on a TV we never tested: say so instead of
                 // dropping back to the TV's menu.
-                Tizen.Log.Error("OmegaTube", "startup: " + e);
+                Tizen.Log.Error("omegatube-modern", "startup: " + e);
                 if (BugReport.CoreLoaded)
                 {
                     NativeCore.Log("startup: " + e);
@@ -92,7 +92,7 @@ namespace OmegaTube
             }
             catch (Exception e)
             {
-                Tizen.Log.Error("OmegaTube", "dev.json: " + e.Message);
+                Tizen.Log.Error("omegatube-modern", "dev.json: " + e.Message);
             }
         }
 
@@ -140,7 +140,7 @@ namespace OmegaTube
                     }
                     catch (Exception again)
                     {
-                        Tizen.Log.Error("OmegaTube", "re-show after failed push: " + again.Message);
+                        Tizen.Log.Error("omegatube-modern", "re-show after failed push: " + again.Message);
                     }
                 }
                 throw;
@@ -189,7 +189,7 @@ namespace OmegaTube
             }
             catch (Exception e)
             {
-                Tizen.Log.Error("OmegaTube", "report screen: " + e);
+                Tizen.Log.Error("omegatube-modern", "report screen: " + e);
                 text += "\n\nreport screen: " + e.GetType().Name + ": " + e.Message;
             }
             try
@@ -198,7 +198,7 @@ namespace OmegaTube
             }
             catch (Exception e)
             {
-                Tizen.Log.Error("OmegaTube", "safe error screen: " + e);
+                Tizen.Log.Error("omegatube-modern", "safe error screen: " + e);
             }
         }
 
@@ -206,7 +206,7 @@ namespace OmegaTube
         {
             if (stack.Count <= 1)
             {
-                Confirm(I18n.T("Do you want to quit OmegaTube?"), Exit);
+                Confirm(I18n.T("Do you want to quit omegatube-modern?"), Exit);
                 return;
             }
             Screen top = stack[stack.Count - 1];

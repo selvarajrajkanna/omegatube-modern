@@ -68,7 +68,7 @@ namespace OmegaTube.Ui
             string text = where + ": " + e;
             try
             {
-                Tizen.Log.Error("OmegaTube", "UI error in " + text);
+                Tizen.Log.Error("omegatube-modern", "UI error in " + text);
                 if (BugReport.CoreLoaded)
                 {
                     NativeCore.Log("ui error in " + text);

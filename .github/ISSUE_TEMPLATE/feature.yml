@@ -1,13 +1,13 @@
 name: Feature request / suggestion
-description: Suggest a new feature, a change to how the app works, or any idea to make OmegaTube better
+description: Suggest a new feature, a change to how the app works, or any idea to make omegatube-modern better
 labels: [enhancement]
 body:
   - type: markdown
     attributes:
       value: |
         Thanks for taking the time to share an idea! Anyone can suggest something: a new feature, a change to an existing one, a different default, a layout tweak, or a general recommendation.
-        Only one idea per issue, please, so each one can be discussed and tracked on its own. Before posting, have a quick look at the [existing issues](https://github.com/IIyn/omegatube/issues?q=is%3Aissue) in case it was already suggested: if so, add a 👍 or a comment there instead.
-        Something doesn't work? Use the [bug report](https://github.com/IIyn/omegatube/issues/new?template=bug.yml) instead.
+        Only one idea per issue, please, so each one can be discussed and tracked on its own. Before posting, have a quick look at the [existing issues](https://github.com/selvarajrajkanna/omegatube-modern/issues?q=is%3Aissue) in case it was already suggested: if so, add a 👍 or a comment there instead.
+        Something doesn't work? Use the [bug report](https://github.com/selvarajrajkanna/omegatube-modern/issues/new?template=bug.yml) instead.
   - type: dropdown
     id: kind
     attributes:
@@ -47,7 +47,7 @@ body:
   - type: input
     id: version
     attributes:
-      label: OmegaTube version
+      label: omegatube-modern version
       description: Optional. Settings → About on the TV.
       placeholder: "1.2.1"
   - type: checkboxes

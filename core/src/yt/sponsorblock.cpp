@@ -34,7 +34,7 @@ bool sponsor_segments(const std::string& video_id, std::vector<SkipSegment>& out
     net::Request req;
     req.url = cfg::str({"sponsorblock", "api"}) + "/api/skipSegments/" + sha256_hex(video_id).substr(0, 4) +
               "?categories=" + kCategories + "&actionType=skip";
-    req.headers = {{"User-Agent", "OmegaTube"}};
+    req.headers = {{"User-Agent", "omegatube-modern"}};
     net::Response res = net::fetch(req);
     if (res.status == 404) return true;  // no segments for any video of this prefix
     if (!res.ok()) {
