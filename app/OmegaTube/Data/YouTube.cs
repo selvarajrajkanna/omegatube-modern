@@ -59,6 +59,7 @@ namespace OmegaTube.Data
         public string Title = "", Description = "", Views = "", ChannelId = "";
         public List<AudioTrack> AudioTracks = new List<AudioTrack>();     // empty: single-language video
         public string AudioTrack = "";                                    // playing track id
+        public string AudioCodec = "";                                    // e.g. mp4a.40.2, opus
         public List<CaptionTrack> Captions = new List<CaptionTrack>();
         public Dictionary<string, string> Translations = new Dictionary<string, string>();  // code -> name
     }
@@ -375,6 +376,7 @@ namespace OmegaTube.Data
                 Views = Json.Str(root, "views"),
                 ChannelId = Json.Str(root, "channelId"),
                 AudioTrack = Json.Str(root, "audioTrack"),
+                AudioCodec = Json.Str(root, "audioCodec"),
             };
             object cur = Json.Obj(root, "current");
             info.Current = cur != null ? ToQuality(cur) : null;

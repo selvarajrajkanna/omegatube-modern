@@ -234,7 +234,8 @@ omega_player* omega_player_create_youtube(void* window, int width, int height, c
                 }
                 p->formats = {{"current", entry(video)},  {"available", available}, {"live", info.is_live},
                               {"title", info.title}, {"author", info.author}, {"description", info.description},
-                              {"views", info.views}, {"channelId", info.channel_id}, {"audioTrack", audio->audio_track_id}};
+                              {"views", info.views}, {"channelId", info.channel_id}, {"audioTrack", audio->audio_track_id},
+                              {"audioCodec", audio ? audio->codecs : ""}};
                 p->formats["audioTracks"] = audio_tracks_json(info);
                 nlohmann::json captions = nlohmann::json::array(), translations = nlohmann::json::array();
                 for (const auto& c : info.captions)

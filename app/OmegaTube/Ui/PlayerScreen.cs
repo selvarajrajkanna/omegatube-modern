@@ -991,6 +991,7 @@ namespace OmegaTube.Ui
                     $"  buf v{stats.VideoQueuedMs / 1000.0:F1}s a{stats.AudioQueuedMs / 1000.0:F1}s | {stats.VideoKbps:F0}/{stats.AudioKbps:F0} kb/s\n" +
                     $"  stalls {stats.Stalls} ({stats.LongestStallMs}ms) | drop v{stats.VideoUnderruns}/a{stats.AudioUnderruns} err {stats.Errors}\n" +
                     "  " + (info.Current != null ? QualityLabel(info.Current) : $"{maxHeight}p") +
+                    (info.AudioCodec.Length > 0 ? $" | {AudioCodecLabel(info.AudioCodec)}" : "") +
                     $" {sessionSpeed:0.##}x" +
                     (info.AudioTrack.Length > 0 ? $" | {info.AudioTrack}" : "") +
                     $" | v{BugReport.AppVersion}" +
@@ -2314,6 +2315,17 @@ namespace OmegaTube.Ui
                 text += $" ({hdr})";
             }
             return text;
+        }
+
+        private static string AudioCodecLabel(string codecs)
+        {
+            if (string.IsNullOrEmpty(codecs)) return "";
+            if (codecs.StartsWith("mp4a.40.5", StringComparison.OrdinalIgnoreCase)) return $"HE-AAC ({codecs})";
+            if (codecs.StartsWith("mp4a", StringComparison.OrdinalIgnoreCase)) return $"AAC ({codecs})";
+            if (codecs.Equals("opus", StringComparison.OrdinalIgnoreCase)) return "Opus";
+            if (codecs.Equals("ec-3", StringComparison.OrdinalIgnoreCase)) return "E-AC-3";
+            if (codecs.Equals("ac-3", StringComparison.OrdinalIgnoreCase)) return "AC-3";
+            return codecs;
         }
 
         // Raw view count -> "1.2M views" / "845 views".
