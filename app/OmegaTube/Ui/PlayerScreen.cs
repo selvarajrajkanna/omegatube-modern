@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
+using System.IO;
 using System.Threading.Tasks;
 using OmegaTube.Config;
 using OmegaTube.Data;
@@ -117,6 +119,10 @@ namespace OmegaTube.Ui
         private DateTime pendingSeekAt;
         private DateTime seekStartAt;
         private int seekDirection;
+        private DateTime lastSysSampleAt;
+        private TimeSpan lastProcCpu;
+        private long lastSysTotalCpu, lastSysIdleCpu;
+        private string sysStatsLine = "";
         private NativeCore.PlayerStats stats;
         private List<SkipSegment> segments = new List<SkipSegment>();
         private SkipSegment offered;       // manual segment currently offered with the skip button
@@ -277,7 +283,7 @@ namespace OmegaTube.Ui
             panel = new ListPanel();
             Root.Add(panel);
 
-            statsLabel = Widgets.Label("", Theme.SmallSize, Theme.Text, 820, 270);
+            statsLabel = Widgets.Label("", Theme.SmallSize, Theme.Text, 820, 305);
             statsLabel.MultiLine = true;
             statsLabel.BackgroundColor = Theme.Scrim;
             Widgets.Round(statsLabel, 10);
@@ -955,13 +961,16 @@ namespace OmegaTube.Ui
             UpdateChrome(now);
             if (statsLabel.Visibility && player != IntPtr.Zero)
             {
+                SampleSystemStats(now);
                 statsLabel.Text =
                     $"  buffer  video {stats.VideoQueuedMs / 1000.0:F1}s  audio {stats.AudioQueuedMs / 1000.0:F1}s\n" +
                     $"  bitrate  video {stats.VideoKbps:F0} kb/s  audio {stats.AudioKbps:F0} kb/s\n" +
                     $"  stalls {stats.Stalls} (max {stats.LongestStallMs} ms)  underruns v{stats.VideoUnderruns}/a{stats.AudioUnderruns}\n" +
                     $"  errors {stats.Errors}   speed {sessionSpeed:0.##}x   max {maxHeight}p" +
                     (info.Current != null ? "   playing " + QualityLabel(info.Current) : "") +
-                    (info.AudioTrack.Length > 0 ? "   audio " + info.AudioTrack : "") + "\n" + NativeCore.RecentLog(3);
+                    (info.AudioTrack.Length > 0 ? "   audio " + info.AudioTrack : "") + "\n" +
+                    (sysStatsLine.Length > 0 ? sysStatsLine + "\n" : "") +
+                    NativeCore.RecentLog(3);
             }
             if (toast.Visibility && now > toastUntil)
             {
@@ -980,6 +989,96 @@ namespace OmegaTube.Ui
             {
                 ended = true;
                 OnEnded();
+            }
+        }
+
+        private void SampleSystemStats(DateTime now)
+        {
+            double elapsedMs = (now - lastSysSampleAt).TotalMilliseconds;
+            if (lastSysSampleAt != default && elapsedMs < 1000)
+            {
+                return;
+            }
+            try
+            {
+                using Process proc = Process.GetCurrentProcess();
+                TimeSpan cpuTime = proc.TotalProcessorTime;
+                double appCpu = 0;
+                if (lastSysSampleAt != default && elapsedMs > 0)
+                {
+                    appCpu = (cpuTime - lastProcCpu).TotalMilliseconds / (elapsedMs * Math.Max(1, Environment.ProcessorCount)) * 100.0;
+                    appCpu = Math.Clamp(appCpu, 0.0, 100.0);
+                }
+                lastProcCpu = cpuTime;
+
+                double sysCpu = -1;
+                try
+                {
+                    using var sr = new StreamReader("/proc/stat");
+                    string line = sr.ReadLine();
+                    if (line != null && line.StartsWith("cpu "))
+                    {
+                        string[] parts = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                        long total = 0, idle = 0;
+                        for (int i = 1; i < parts.Length; i++)
+                        {
+                            if (long.TryParse(parts[i], out long v))
+                            {
+                                total += v;
+                                if (i == 4 || i == 5) idle += v;
+                            }
+                        }
+                        if (lastSysSampleAt != default && total > lastSysTotalCpu)
+                        {
+                            long dTotal = total - lastSysTotalCpu;
+                            long dIdle = idle - lastSysIdleCpu;
+                            sysCpu = Math.Clamp((double)(dTotal - dIdle) / dTotal * 100.0, 0.0, 100.0);
+                        }
+                        lastSysTotalCpu = total;
+                        lastSysIdleCpu = idle;
+                    }
+                }
+                catch (Exception)
+                {
+                }
+
+                double appMb = proc.WorkingSet64 / (1024.0 * 1024.0);
+                double gcMb = GC.GetTotalMemory(false) / (1024.0 * 1024.0);
+                double sysUsedMb = -1, sysTotalMb = -1;
+                try
+                {
+                    long memTotalKb = -1, memAvailKb = -1;
+                    foreach (string line in File.ReadLines("/proc/meminfo"))
+                    {
+                        if (line.StartsWith("MemTotal:"))
+                        {
+                            long.TryParse(line.AsSpan(9).Trim().TrimEnd("kB".ToCharArray()).Trim(), out memTotalKb);
+                        }
+                        else if (line.StartsWith("MemAvailable:"))
+                        {
+                            long.TryParse(line.AsSpan(13).Trim().TrimEnd("kB".ToCharArray()).Trim(), out memAvailKb);
+                        }
+                        if (memTotalKb >= 0 && memAvailKb >= 0) break;
+                    }
+                    if (memTotalKb > 0 && memAvailKb >= 0)
+                    {
+                        sysTotalMb = memTotalKb / 1024.0;
+                        sysUsedMb = (memTotalKb - memAvailKb) / 1024.0;
+                    }
+                }
+                catch (Exception)
+                {
+                }
+
+                string cpuText = sysCpu >= 0 ? $"cpu  app {appCpu:F1}%  sys {sysCpu:F1}%" : $"cpu  app {appCpu:F1}%";
+                string memText = sysTotalMb > 0
+                    ? $"mem  {sysUsedMb:F0}/{sysTotalMb:F0} MB (app {appMb:F0} MB, gc {gcMb:F0} MB)"
+                    : $"mem  app {appMb:F0} MB (gc {gcMb:F0} MB)";
+                sysStatsLine = $"  {cpuText}   {memText}";
+                lastSysSampleAt = now;
+            }
+            catch (Exception)
+            {
             }
         }
 
