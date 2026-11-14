@@ -50,6 +50,8 @@ public:
     std::string header(std::string_view name) const;  // case-insensitive, "" if absent
     std::string_view header_view(std::string_view name) const;
     bool body_done() const { return body_done_; }
+    bool is_reusable() const { return transport_ && reusable_ && body_done_; }
+    const std::string& host_key() const { return host_key_; }
     const std::string& error() const { return error_; }
 
 private:

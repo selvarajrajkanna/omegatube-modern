@@ -5,6 +5,7 @@
 #include <climits>
 #include <cstring>
 #include <memory>
+#include <thread>
 #include <vector>
 
 #include "net/http.h"
@@ -90,7 +91,14 @@ bool Player::start() {
         OLOG("live: head segment %lld, starting at %lld", static_cast<long long>(head), static_cast<long long>(live_seq));
     }
     std::deque<media::Sample> first_samples[2];  // live: first fragment of each source, read up front
-    for (Source& src : sources) {
+    struct OpenResult {
+        bool ok = false;
+        bool refused = false;
+        std::string error;
+    };
+    OpenResult results[2];
+    auto open_source = [&](size_t idx) {
+        Source& src = sources[idx];
         Track& t = *src.track;
         if (cfg_.live) src.http = std::make_unique<net::LiveReader>(t.url, cfg_.stream_headers, live_seq);
         else src.http = std::make_unique<net::RangeReader>(t.url, cfg_.stream_headers);
@@ -109,21 +117,36 @@ bool Player::start() {
             return got;
         });
         if (!src.reader->read_header()) {
-            stream_refused_ = http->refused();
-            error_ = std::string(stream_name(t.type)) + " demux: " + src.reader->error() +
-                     (http->error().empty() ? "" : " / http: " + http->error());
-            return false;
+            results[idx].refused = http->refused();
+            results[idx].error = std::string(stream_name(t.type)) + " demux: " + src.reader->error() +
+                                 (http->error().empty() ? "" : " / http: " + http->error());
+            return;
         }
         t.info = src.reader->track();
         t.segments = src.reader->segments();
         if (cfg_.live && !src.reader->read_fragment(first_samples[&t == &video_ ? 0 : 1])) {
-            error_ = std::string(stream_name(t.type)) + " live: no first segment (" + src.reader->error() + ")";
-            return false;
+            results[idx].error = std::string(stream_name(t.type)) + " live: no first segment (" + src.reader->error() + ")";
+            return;
         }
         OLOG("%s: %s %s timescale=%u %ux%u ch=%u rate=%u codec_data=%zu bytes, media_time=%lld, %zu segments",
              stream_name(t.type), t.info.container == media::Container::WebM ? "webm" : "mp4",
              media::codec_name(t.info.codec), t.info.timescale, t.info.width, t.info.height,
              t.info.channels, t.info.sample_rate, t.info.codec_data.size(), static_cast<long long>(t.info.media_time), t.segments.size());
+        results[idx].ok = true;
+    };
+    if (sources.size() > 1) {
+        std::thread second([&] { open_source(1); });
+        open_source(0);
+        second.join();
+    } else if (!sources.empty()) {
+        open_source(0);
+    }
+    for (size_t i = 0; i < sources.size(); ++i) {
+        if (!results[i].ok) {
+            stream_refused_ = results[i].refused;
+            error_ = results[i].error;
+            return false;
+        }
     }
     esp::VideoMime vmime = esp::VIDEO_H264;
     if ((cfg_.use_video && !video_mime(video_.info.codec, vmime)) ||

@@ -608,23 +608,77 @@ std::string Connection::header(std::string_view name) const {
     return std::string(header_view(name));
 }
 
+class ConnectionPool {
+public:
+    static constexpr size_t kMaxIdle = 8;
+    static constexpr auto kIdleTtl = std::chrono::seconds(45);
+
+    std::unique_ptr<Connection> take(const std::string& key) {
+        std::lock_guard lock(mu_);
+        auto now = std::chrono::steady_clock::now();
+        for (auto it = entries_.begin(); it != entries_.end();) {
+            if (now - it->ts >= kIdleTtl) {
+                it = entries_.erase(it);
+                continue;
+            }
+            if (it->conn->host_key() == key) {
+                auto conn = std::move(it->conn);
+                entries_.erase(it);
+                return conn;
+            }
+            ++it;
+        }
+        return std::make_unique<Connection>();
+    }
+
+    void put(std::unique_ptr<Connection> conn) {
+        if (!conn || !conn->is_reusable()) return;
+        std::lock_guard lock(mu_);
+        auto now = std::chrono::steady_clock::now();
+        for (auto it = entries_.begin(); it != entries_.end();) {
+            if (now - it->ts >= kIdleTtl) it = entries_.erase(it);
+            else ++it;
+        }
+        if (entries_.size() >= kMaxIdle) entries_.erase(entries_.begin());
+        entries_.push_back({std::move(conn), now});
+    }
+
+private:
+    struct Entry {
+        std::unique_ptr<Connection> conn;
+        std::chrono::steady_clock::time_point ts;
+    };
+    std::mutex mu_;
+    std::vector<Entry> entries_;
+};
+
+ConnectionPool& conn_pool() {
+    static ConnectionPool pool;
+    return pool;
+}
+
 Response fetch(const Request& req, size_t max_body) {
     Response res;
-    Connection conn;
+    Url first_url;
+    std::string initial_key;
+    if (Url::parse(req.url, first_url)) {
+        initial_key = (first_url.tls ? "s:" : "p:") + first_url.host + ":" + first_url.port;
+    }
+    auto conn = initial_key.empty() ? std::make_unique<Connection>() : conn_pool().take(initial_key);
     Request current = req;
     for (int redirects = 0;; ++redirects) {
-        if (!conn.send(current) && !conn.send(current)) {  // one retry: TV Wi-Fi hiccups are common
-            res.error = conn.error();
+        if (!conn->send(current) && !conn->send(current)) {  // one retry: TV Wi-Fi hiccups are common
+            res.error = conn->error();
             return res;
         }
-        res.status = conn.status();
-        res.body = conn.read_all(max_body);
-        if (res.body.size() >= max_body && !conn.body_done()) {
+        res.status = conn->status();
+        res.body = conn->read_all(max_body);
+        if (res.body.size() >= max_body && !conn->body_done()) {
             res.body.clear();
             res.error = "response too large";
             return res;
         }
-        std::string location = conn.header("Location");
+        std::string location = conn->header("Location");
         if (!is_redirect(res.status) || location.empty() || redirects == 5) break;
         current.url = location;
         if (res.status == 303) {
@@ -632,7 +686,11 @@ Response fetch(const Request& req, size_t max_body) {
             current.body.clear();
         }
     }
-    if (!conn.body_done() && !conn.error().empty()) res.error = conn.error();
+    if (!conn->body_done() && !conn->error().empty()) {
+        res.error = conn->error();
+        return res;
+    }
+    conn_pool().put(std::move(conn));
     return res;
 }
 
