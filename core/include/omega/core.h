@@ -76,6 +76,8 @@ OMEGA_API char* omega_player_last_error(void);
 // "captions":[{"url","lang","name","auto","translatable"}], "translations":[{"code","name"}].
 // Release with omega_free(). {"available":[]} for a URL player.
 OMEGA_API char* omega_player_formats(omega_player* player);
+// Updates the ESPlayer display rectangle within the window (letterbox mode preserves aspect ratio).
+OMEGA_API int omega_player_set_display_rect(omega_player* player, int x, int y, int w, int h);
 OMEGA_API void omega_player_toggle_pause(omega_player* player);
 // Seeks to position_ms (video decoding restarts from the preceding keyframe). Blocking for a few hundred ms.
 OMEGA_API int omega_player_seek(omega_player* player, int64_t position_ms);

@@ -33,7 +33,7 @@ namespace OmegaTube.Ui
         private static double sessionSpeed = 1.0;
         private static string loopVideoId;   // loop survives the player restart that replays the video
 
-        private enum Focus { Hidden, Actions, Timeline, Buttons, Playlist, Suggestions, Section, Panel, UpNext }
+        private enum Focus { Hidden, Actions, Timeline, Buttons, Playlist, Suggestions, Section, Panel, Comments, UpNext }
         private enum Social { Channel, Subscribe, Like }
 
         // A pill of the actions row: icon or avatar, then text; sized from its text.
@@ -45,7 +45,7 @@ namespace OmegaTube.Ui
             public TextLabel Label;
             public bool Active;      // subscribed / liked / disliked
         }
-        private enum Action { Restart, PlayPause, Next, Skip, Captions, Audio, Speed, Quality, Loop, Stats }
+        private enum Action { Restart, PlayPause, Next, Comments, Skip, Captions, Audio, Speed, Quality, Loop, Stats }
 
         private class Button
         {
@@ -98,6 +98,7 @@ namespace OmegaTube.Ui
         private bool socialBusy;
         private FeedRow playlistRow, suggestions;
         private readonly WatchSection section;
+        private readonly CommentsPanel commentsPanel;
         private Focus focus = Focus.Hidden;
         private int buttonIndex;
         private Action panelKind;
@@ -271,6 +272,7 @@ namespace OmegaTube.Ui
             AddButton(Action.Restart, "restart", ref x);
             playButton = AddButton(Action.PlayPause, "pause", ref x);
             AddButton(Action.Next, "skip_next", ref x);
+            AddButton(Action.Comments, "view_list", ref x);
             // Right group, right to left.
             AddRightButton(Action.Stats, "stats");
             AddRightButton(Action.Loop, "repeat");
@@ -292,6 +294,10 @@ namespace OmegaTube.Ui
 
             panel = new ListPanel();
             Root.Add(panel);
+
+            commentsPanel = new CommentsPanel(item.Id, Root);
+            commentsPanel.Toast = text => Toast(text);
+            Root.Add(commentsPanel);
 
             statsLabel = Widgets.Label("", Theme.SmallSize - 3, Theme.Text, 520, 120);
             statsLabel.MultiLine = true;
@@ -896,6 +902,7 @@ namespace OmegaTube.Ui
             }
             closing = true;
             section.Close();
+            commentsPanel.Close();
             tick?.Stop();
             captionTick?.Stop();
             spin.Stop();
@@ -1553,6 +1560,7 @@ namespace OmegaTube.Ui
                 Action.Restart => T("Restart"),
                 Action.PlayPause => stats.State == 4 || ended ? T("Play") : T("Pause"),
                 Action.Next => InList ? T("Next in the list") : T("Next video"),
+                Action.Comments => T("Comments"),
                 Action.Captions => T("Subtitles: {0}", captions != null ? CaptionName(captions) : T("off")),
                 Action.Audio => T("Audio track: {0}", AudioName(info.AudioTrack)),
                 Action.Speed => T("Speed: {0}", SpeedLabel(sessionSpeed)),
@@ -1612,7 +1620,7 @@ namespace OmegaTube.Ui
                     buttonIndex = buttons.IndexOf(playButton);
                     ShowChrome(Focus.Buttons);
                 }
-                else if (focus != Focus.Panel && focus != Focus.UpNext)
+                else if (focus != Focus.Panel && focus != Focus.UpNext && focus != Focus.Comments)
                 {
                     ShowChrome(Focus.Hidden);
                 }
@@ -1835,6 +1843,12 @@ namespace OmegaTube.Ui
                 case Focus.Panel:
                     PanelKey(key);
                     return true;
+                case Focus.Comments:
+                    if (!commentsPanel.Key(key))
+                    {
+                        CloseCommentsSplit();
+                    }
+                    return true;
 
                 case Focus.UpNext:
                     return UpNextKey(key);
@@ -1875,6 +1889,9 @@ namespace OmegaTube.Ui
                     {
                         App.Replace(new PlayerScreen(App, suggestions.FocusedItem));
                     }
+                    break;
+                case Action.Comments:
+                    OpenCommentsSplit();
                     break;
                 case Action.Skip:
                     if (offered != null)
@@ -2259,8 +2276,46 @@ namespace OmegaTube.Ui
             toastUntil = DateTime.Now.AddSeconds(2);
         }
 
+        private void OpenCommentsSplit()
+        {
+            HideChrome();
+            focus = Focus.Comments;
+            commentsPanel.Open();
+            SetVideoViewport(CommentsPanel.PanelWidth, 0, 1920 - CommentsPanel.PanelWidth, 1080);
+        }
+
+        private void CloseCommentsSplit()
+        {
+            commentsPanel.ClosePanel();
+            SetVideoViewport(0, 0, 1920, 1080);
+            focus = Focus.Hidden;
+        }
+
+        private void SetVideoViewport(int vx, int vy, int vw, int vh)
+        {
+            IntPtr p = player;
+            if (p != IntPtr.Zero)
+            {
+                Task.Run(() => NativeCore.PlayerSetDisplayRect(p, vx, vy, vw, vh));
+            }
+            captionLabel.PositionX = vx + vw / 2f;
+            LayoutBars(vx, vy, vw, vh);
+        }
+
         // The video plane is letterboxed and leaves the uncovered area empty: cover it in black.
         private void LayoutBars()
+        {
+            if (focus == Focus.Comments)
+            {
+                LayoutBars(CommentsPanel.PanelWidth, 0, 1920 - CommentsPanel.PanelWidth, 1080);
+            }
+            else
+            {
+                LayoutBars(0, 0, 1920, 1080);
+            }
+        }
+
+        private void LayoutBars(int vx, int vy, int vw, int vh)
         {
             barA.Hide();
             barB.Hide();
@@ -2270,25 +2325,26 @@ namespace OmegaTube.Ui
                 return;
             }
             double aspect = playing.Width / (double)playing.Height;
-            if (Math.Abs(aspect - 16.0 / 9.0) < 0.01)
+            double containerAspect = vw / (double)vh;
+            if (Math.Abs(aspect - containerAspect) < 0.01)
             {
                 return;
             }
-            if (aspect < 16.0 / 9.0)
+            if (aspect < containerAspect)
             {
-                int side = (int)Math.Ceiling((1920 - 1080 * aspect) / 2);   // pillarbox: left / right
-                barA.Size = new Size(side, 1080);
-                barA.Position = new Position(0, 0);
-                barB.Size = new Size(side, 1080);
-                barB.Position = new Position(1920 - side, 0);
+                int side = (int)Math.Ceiling((vw - vh * aspect) / 2);   // pillarbox: left / right
+                barA.Size = new Size(side, vh);
+                barA.Position = new Position(vx, vy);
+                barB.Size = new Size(side, vh);
+                barB.Position = new Position(vx + vw - side, vy);
             }
             else
             {
-                int band = (int)Math.Ceiling((1080 - 1920 / aspect) / 2);   // letterbox: top / bottom
-                barA.Size = new Size(1920, band);
-                barA.Position = new Position(0, 0);
-                barB.Size = new Size(1920, band);
-                barB.Position = new Position(0, 1080 - band);
+                int band = (int)Math.Ceiling((vh - vw / aspect) / 2);   // letterbox: top / bottom
+                barA.Size = new Size(vw, band);
+                barA.Position = new Position(vx, vy);
+                barB.Size = new Size(vw, band);
+                barB.Position = new Position(vx, vy + vh - band);
             }
             barA.Show();
             barB.Show();
