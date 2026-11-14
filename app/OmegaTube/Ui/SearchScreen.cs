@@ -44,7 +44,6 @@ namespace OmegaTube.Ui
         private const int CharRows = 4, ActionRow = 4, ActionKeys = 5;
         private const int KeyW = 86, KeyH = 72, KeyGap = 8;
         private const int KbX = 80, KbY = 190;
-        private const int ImeDoneKeyCode = 65376;
 
         private enum Zone { Input, Keyboard, Suggestions, AddButton, Results }
 
@@ -58,7 +57,6 @@ namespace OmegaTube.Ui
         private FeedRow results;
         private string query = "";
         private bool syncingField;
-        private long imeSubmitTick;
         private Zone zone = Zone.Keyboard;
         private int keyRow = 1, keyCol;
         private int suggestionIndex;
@@ -92,15 +90,7 @@ namespace OmegaTube.Ui
                 {
                     return;
                 }
-                string text = queryField.Text ?? "";
-                bool submittedNewline = zone == Zone.Input && (text.IndexOf('\r') >= 0 || text.IndexOf('\n') >= 0);
-                query = text.Replace("\r", "").Replace("\n", "");
-                if (submittedNewline)
-                {
-                    SyncField();
-                    SubmitInput();
-                    return;
-                }
+                query = queryField.Text ?? "";
                 UiGuard.Fire("SearchScreen.RefreshSuggestions", RefreshSuggestions);
             };
             queryField.KeyEvent += OnFieldKey;
@@ -213,14 +203,8 @@ namespace OmegaTube.Ui
             results?.SetFocused(zone == Zone.Results);
         }
 
-        public override void OnShow()
-        {
-            FocusManager.Instance.FocusedViewEnterKey += OnFocusedViewEnterKey;
-        }
-
         public override void OnHide()
         {
-            FocusManager.Instance.FocusedViewEnterKey -= OnFocusedViewEnterKey;
             if (FocusManager.Instance.GetCurrentFocusView() == queryField)
             {
                 FocusManager.Instance.ClearFocus();
@@ -237,7 +221,7 @@ namespace OmegaTube.Ui
             {
                 return false;
             }
-            bool isDoneCode = e.Key.KeyCode == ImeDoneKeyCode;
+            bool isDoneCode = e.Key.KeyCode == 65376;
             if (e.Key.State != Key.StateType.Down && !(isDoneCode && e.Key.State == Key.StateType.Up))
             {
                 return false;
@@ -246,26 +230,17 @@ namespace OmegaTube.Ui
             {
                 return false;
             }
-            UiGuard.Run("SearchScreen.FieldKey", SubmitInput);
-            return true;
-        }
-
-        private void OnFocusedViewEnterKey(object sender, FocusManager.FocusedViewActivatedEventArgs e)
-        {
-            if (zone == Zone.Input && e.View == queryField)
+            UiGuard.Run("SearchScreen.FieldKey", () =>
             {
-                UiGuard.Run("SearchScreen.FocusedEnter", SubmitInput);
-            }
+                SubmitInput();
+                UpdateFocus();
+            });
+            return true;
         }
 
         private void SubmitInput()
         {
-            if (System.Environment.TickCount64 - imeSubmitTick < 150)
-            {
-                return;
-            }
-            imeSubmitTick = System.Environment.TickCount64;
-            string fieldText = (queryField.Text ?? "").Replace("\r", "").Replace("\n", "");
+            string fieldText = (queryField.Text ?? "").Trim();
             if (fieldText.Length > 0)
             {
                 query = fieldText;
@@ -273,7 +248,6 @@ namespace OmegaTube.Ui
             if (query.Trim().Length > 0)
             {
                 RunSearch();
-                UpdateFocus();
             }
             else
             {
@@ -284,10 +258,6 @@ namespace OmegaTube.Ui
 
         public override bool OnKey(string key)
         {
-            if (IsSubmitKey(key) && System.Environment.TickCount64 - imeSubmitTick < 150)
-            {
-                return true;
-            }
             switch (zone)
             {
                 case Zone.Input:
