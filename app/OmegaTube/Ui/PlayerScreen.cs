@@ -1939,12 +1939,19 @@ namespace OmegaTube.Ui
                     break;
                 case Action.Quality:
                     title = T("Quality");
-                    width = 640;
+                    width = 480;
                     foreach (VideoQuality q in PanelQualities())
                     {
+                        string res = q.Height == 2160 ? "2160p (4K)" : q.Height == 1440 ? "1440p (2K)" : $"{q.Height}p";
+                        string codec = q.Codec == "avc1" ? "H.264" : q.Codec == "vp9" ? "VP9" : q.Codec == "av01" ? "AV1" : "";
+                        string sub = q.Fps > 0 ? $"{q.Fps} fps" : "";
+                        if (codec.Length > 0) sub = sub.Length > 0 ? $"{sub} · {codec}" : codec;
+                        string hdr = q.Hdr ? (!string.IsNullOrEmpty(q.HdrMode) && q.HdrMode != "None" ? q.HdrMode : "HDR") : null;
                         items.Add(new ListPanel.Item
                         {
-                            Text = QualityLabel(q),
+                            Text = res,
+                            SubText = sub,
+                            Badge = hdr,
                             Checked = q.Height == (info.Current != null ? info.Current.Height : maxHeight),
                         });
                     }
@@ -1955,7 +1962,7 @@ namespace OmegaTube.Ui
                 return;
             }
             tooltip.Hide();
-            panel.Open(title, items, ProgressX + ProgressWidth, ButtonsY - 30, width);
+            panel.Open(title, items, ProgressX + ProgressWidth, ButtonsY - 20, width);
             focus = Focus.Panel;
         }
 
