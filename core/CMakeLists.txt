@@ -15,6 +15,9 @@ set(MBEDTLS_FATAL_WARNINGS OFF CACHE BOOL "" FORCE)
 set(USE_SHARED_MBEDTLS_LIBRARY OFF CACHE BOOL "" FORCE)
 set(USE_STATIC_MBEDTLS_LIBRARY ON CACHE BOOL "" FORCE)
 add_subdirectory(${OMEGA_DEPS}/mbedtls-3.6.7 mbedtls EXCLUDE_FROM_ALL)
+if(TARGET mbedcrypto)
+    target_compile_options(mbedcrypto PRIVATE -O3)
+endif()
 
 # QuickJS-ng (static, PIC): runs the yt-dlp EJS solver on YouTube's player JS (fallback client).
 set(OMEGA_QUICKJS ${OMEGA_DEPS}/quickjs-0.17.0)
@@ -69,7 +72,7 @@ add_library(omegacore SHARED
 )
 target_include_directories(omegacore PUBLIC include PRIVATE src ${OMEGA_DEPS})
 # qrcodegen is included as <qrcodegen/qrcodegen.hpp>
-target_compile_options(omegacore PRIVATE -Wall -Wextra -O2 $<$<CXX_COMPILER_ID:GNU>:-Wno-psabi>)
+target_compile_options(omegacore PRIVATE -Wall -Wextra -O3 $<$<CXX_COMPILER_ID:GNU>:-Wno-psabi>)
 set_target_properties(omegacore PROPERTIES CXX_VISIBILITY_PRESET hidden)
 
 find_package(Threads REQUIRED)
